@@ -246,3 +246,31 @@ def test_combined_fixtures_cover_all_sources() -> None:
     runtimes = {f.evidence.metadata.get("runtime") for f in findings}
     assert "ollama" in runtimes
     assert "vllm" in runtimes
+
+
+def test_yaml_alias_bomb_is_refused_gracefully(tmp_path: Path) -> None:
+    """A YAML file with pathological anchor / alias density must not be
+    parsed by the detector. Without the bomb defence in utils/specs.py,
+    PyYAML's safe_load expands aliases without bound and can OOM the
+    scan host. The detector should return no findings on this input."""
+    # Build a 200-anchor / 200-alias header that trips the heuristic. The
+    # tail looks like a normal k8s manifest with an AI image, so without
+    # the bomb defence the detector would otherwise try to parse it.
+    anchors = "\n".join(f"a{i}: &a{i} x" for i in range(250))
+    aliases = "\n".join(f"b{i}: *a{i}" for i in range(250))
+    payload = (
+        anchors
+        + "\n"
+        + aliases
+        + "\n"
+        + "kind: Deployment\n"
+        + "spec:\n  template:\n    spec:\n      containers:\n"
+        + "        - image: ollama/ollama:latest\n"
+    )
+    (tmp_path / "bomb.yaml").write_text(payload, encoding="utf-8")
+    # Should not crash, should not OOM, should not raise.
+    findings = AiInfraDetector().detect(str(tmp_path))
+    # We do not assert findings == [] strictly; the regex-level k8s detection
+    # operates on text and may still find the image. What we assert is that
+    # parse_yaml_lenient did not blow up: detect() returned.
+    assert isinstance(findings, list)

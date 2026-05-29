@@ -179,9 +179,9 @@ class EnvKeyDetector:
     def detect(self, root_path: str) -> list[Finding]:
         files_with_hits: list[str] = []
         key_names: list[str] = []  # preserves discovery order; deduped via seen
-        seen_keys: set = set()
+        seen_keys: set[str] = set()
         providers: list[str] = []
-        seen_providers: set = set()
+        seen_providers: set[str] = set()
         first_snippet: str | None = None
         has_observability = False
 

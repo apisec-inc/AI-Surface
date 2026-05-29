@@ -7,6 +7,7 @@ visible without scrolling.
 from __future__ import annotations
 
 from rich.console import Console
+from rich.markup import escape as rich_escape
 from rich.padding import Padding
 from rich.rule import Rule
 from rich.text import Text
@@ -199,7 +200,13 @@ def _render_footer(report: Report, console: Console, verbose: bool = False) -> N
         if verbose:
             console.print(f"[red]Detector errors ({len(report.errors)}):[/red]")
             for err in report.errors:
-                console.print(f"  [red]•[/red] {err}")
+                # Detector errors carry exception text that can include
+                # fragments of attacker-controlled file contents (e.g. a
+                # PyYAML parse error wrapping a malicious YAML snippet).
+                # Escape rich markup so style codes or fake hyperlinks in
+                # that text are rendered as literal characters rather than
+                # interpreted.
+                console.print(f"  [red]•[/red] {rich_escape(err)}")
         else:
             console.print(
                 f"[dim]({len(report.errors)} detector error(s); run with -v for details)[/dim]"

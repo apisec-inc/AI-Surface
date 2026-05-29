@@ -4,8 +4,10 @@ from __future__ import annotations
 import json
 
 from ai_surface.diff import (
+    _MAX_FINDINGS,
     Diff,
     FindingChange,
+    _sanitise_loaded_scan_root,
     compute_diff,
     diff_to_dict,
     load_report_from_json,
@@ -25,9 +27,9 @@ from ai_surface.types import (
 def _f(
     surface: str,
     category: str = CATEGORY_LLM_SDK,
-    files: list = None,
-    permissions: list = None,
-    risk_indicators: list = None,
+    files: list[str] | None = None,
+    permissions: list[str] | None = None,
+    risk_indicators: list[str] | None = None,
 ) -> Finding:
     return Finding(
         surface=surface,
@@ -239,3 +241,52 @@ def test_diff_to_dict_serializable() -> None:
     d = diff_to_dict(diff)
     json.dumps(d)  # raises if not JSON-serializable
     assert d["total_changes"] == 2
+
+
+# ---------------------------------------------------------------------------
+# Loaded-report hardening (defends against tampered baseline files)
+# ---------------------------------------------------------------------------
+
+
+def test_loaded_scan_root_is_sanitised_to_basename() -> None:
+    """A baseline JSON whose scan_root is an absolute path must not let
+    that path re-emerge in the diff output. The privacy contract says
+    scan_root is always a basename; an attacker-edited baseline cannot
+    override that promise."""
+    assert _sanitise_loaded_scan_root("/home/victim/internal/repo") == "repo"
+    assert _sanitise_loaded_scan_root("C:\\Users\\victim\\code\\project") == "project"
+    assert _sanitise_loaded_scan_root("/etc/passwd") == "passwd"
+    assert _sanitise_loaded_scan_root("normal-basename") == "normal-basename"
+    assert _sanitise_loaded_scan_root("") == ""
+
+
+def test_load_report_from_json_caps_findings_at_max() -> None:
+    """A hostile baseline JSON with millions of findings entries must not
+    force pathological memory use. Real scans produce hundreds at most."""
+    huge = {
+        "findings": [
+            {"surface": f"s{i}", "category": "llm-sdk", "evidence": {"files": ["a"]}}
+            for i in range(_MAX_FINDINGS + 100)
+        ],
+        "scan_root": "demo",
+        "scan_timestamp": "",
+        "detectors_run": [],
+    }
+    report = load_report_from_json(json.dumps(huge))
+    assert len(report.findings) == _MAX_FINDINGS
+
+
+def test_loaded_scan_root_redacts_path_in_diff_output() -> None:
+    """End-to-end: a tampered baseline with an absolute scan_root produces
+    a Diff whose base_scan_root is the sanitised basename."""
+    tampered = {
+        "findings": [],
+        "scan_root": "/home/victim/secret-project",
+        "scan_timestamp": "",
+        "detectors_run": [],
+    }
+    base = load_report_from_json(json.dumps(tampered))
+    head = _report()
+    diff = compute_diff(base, head)
+    assert "/" not in diff.base_scan_root
+    assert "victim" not in diff.base_scan_root

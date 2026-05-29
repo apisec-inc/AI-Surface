@@ -139,17 +139,48 @@ def load_report_from_json(text: str) -> Report:
     return _report_from_dict(data)
 
 
+# Caps applied when loading a Report from external JSON (e.g. a baseline
+# file under attacker control). Real scans produce reports far below these
+# numbers; the caps exist to prevent a hostile baseline JSON from forcing
+# pathological memory use or quadratic diffs.
+_MAX_FINDINGS = 10_000
+_MAX_LIST_PER_FINDING = 2_000
+
+
+def _sanitise_loaded_scan_root(raw: str) -> str:
+    """Strip any path-shaped value from a loaded scan_root.
+
+    Reports produced by this tool always store ``scan_root`` as a single
+    basename for privacy. An attacker who hand-edits a baseline JSON can
+    set ``scan_root`` to an absolute path (e.g. ``/home/victim/internal``)
+    which would then re-emerge in any diff output, defeating the path
+    redaction contract. We accept only the basename of whatever they
+    wrote, mirroring what a real scan would have produced.
+    """
+    if not raw:
+        return ""
+    # Strip any directory separators by taking the last component.
+    last = raw.replace("\\", "/").rsplit("/", 1)[-1]
+    return last[:255]
+
+
 def _report_from_dict(data: Mapping[str, Any]) -> Report:
     from .types import Evidence  # local import to avoid circulars
 
     raw_findings = data.get("findings", []) or []
+    if len(raw_findings) > _MAX_FINDINGS:
+        raw_findings = raw_findings[:_MAX_FINDINGS]
     findings: list[Finding] = []
     for f in raw_findings:
         ev_data = f.get("evidence", {}) or {}
+        files = list(ev_data.get("files", []) or [])[:_MAX_LIST_PER_FINDING]
+        line_numbers = list(ev_data.get("line_numbers", []) or [])[:_MAX_LIST_PER_FINDING]
+        permissions = list(f.get("permissions", []) or [])[:_MAX_LIST_PER_FINDING]
+        risk_indicators = list(f.get("risk_indicators", []) or [])[:_MAX_LIST_PER_FINDING]
         ev = Evidence(
-            files=list(ev_data.get("files", []) or []),
+            files=files,
             snippet=str(ev_data.get("snippet", "") or ""),
-            line_numbers=list(ev_data.get("line_numbers", []) or []),
+            line_numbers=line_numbers,
             metadata=dict(ev_data.get("metadata", {}) or {}),
         )
         findings.append(
@@ -157,14 +188,14 @@ def _report_from_dict(data: Mapping[str, Any]) -> Report:
                 surface=str(f.get("surface", "")),
                 category=str(f.get("category", "")),
                 evidence=ev,
-                permissions=list(f.get("permissions", []) or []),
-                risk_indicators=list(f.get("risk_indicators", []) or []),
+                permissions=permissions,
+                risk_indicators=risk_indicators,
                 detector_name=str(f.get("detector_name", "")),
             )
         )
     return Report(
         findings=findings,
-        scan_root=str(data.get("scan_root", "")),
+        scan_root=_sanitise_loaded_scan_root(str(data.get("scan_root", ""))),
         scan_timestamp=str(data.get("scan_timestamp", "")),
         detectors_run=list(data.get("detectors_run", []) or []),
         schema_version=str(data.get("schema_version", "0.5")),

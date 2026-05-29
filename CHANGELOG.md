@@ -27,9 +27,28 @@ All notable changes to `ai-surface` will be documented in this file. The format 
 - The file walker now skips ai-surface's own output artifacts (`.ai-surface-baseline.json`, `.ai-inventory.md`). Without this, re-scanning a repo that had run `--update-baseline` produced a phantom `Model Gateway: Helicone` finding because the baseline JSON captured env-key names such as `HELICONE_API_KEY` in metadata, and the source-level Helicone pattern in the gateway detector matched that text inside the baseline file. The artifact-skip rule covers the default paths; for custom `--baseline-file` paths outside the scan root the rule does not apply, and gitignoring or storing outside the scan root is the recommended pattern.
 - `--baseline` combined with `--categories` now filters the loaded baseline to the same category set before diffing. Previously every surface in a non-matching category appeared as "removed" in the diff (e.g. `--baseline --categories infra` reported every non-infra surface as removed), which was misleading.
 
+### Security
+
+These items came out of a pre-public-flip code-quality and security-gaps review. None are known to be live exploits in v0.5.3, but each closes a class of attack that becomes interesting once the repo is public.
+
+- The GitHub Action now validates `GITHUB_BASE_REF` against a strict refspec regex before passing it to `git fetch`. A ref of the shape `--upload-pack=cmd` would otherwise be interpreted by git as an option and could execute `cmd` as a transport helper. In practice `GITHUB_BASE_REF` is set by GitHub from the target repo's branch list (not by the PR author), so this is defence in depth rather than a live exploit, but the validation removes the entire argument-injection class.
+- The Action's `_set_action_output` helper now strips carriage return and newline from any output value before writing to `GITHUB_OUTPUT`. Today every caller passes a numeric or fixed string, but a future caller could pass a free-text value; the hardening prevents the CVE-2024-27302 class of `GITHUB_OUTPUT` injection.
+- The terminal reporter's verbose detector-error path now escapes Rich markup on the error text before printing. Detector exceptions can carry fragments of attacker-controlled source content (e.g. a YAML parse error that quotes the offending input), and unescaped markup in those strings could render fake hyperlinks or terminal styles in the operator's console.
+- The baseline JSON loader (`_report_from_dict`) now sanitises the loaded `scan_root` to its basename and caps finding-list and per-finding list lengths. Without sanitisation, an attacker who committed a hand-crafted `.ai-surface-baseline.json` could write an absolute path (`/home/victim/internal-repo`) that would then re-emerge in the diff output, defeating the existing path-redaction contract. The list caps (10 000 findings, 2 000 per inner list) prevent baseline files that would force quadratic diffs or unbounded memory use.
+- `parse_yaml_lenient` now refuses to invoke PyYAML on documents that exceed an anchor-or-alias density threshold (200 of either). PyYAML's `safe_load` is safe against `!!python/object` deserialisation but does not bound alias expansion, so a small file (under 100 KB) using nested aliases can expand to multi-GB at load time and OOM the scan host. The heuristic preserves every well-formed YAML file we have seen in the wild.
+
+### Quality
+
+Also from the pre-public review:
+
+- Removed an unused `typing.List` import from `.github/action/entry.py`.
+- Tightened bare `set` annotations in `env_keys.py` to `set[str]`.
+- Tightened the `_f` test helper in `test_diff.py` to use `list[str] | None` instead of `list = None`.
+
 ### Tested
 
-- 192 tests passing on Python 3.9 through 3.12; ruff and mypy clean.
+- 196 tests passing on Python 3.9 through 3.12; ruff and mypy clean.
+- Three new regression tests cover the loaded-scan-root sanitisation, the loaded-findings cap, and the YAML alias-bomb refusal.
 
 ## [0.5.2] - 2026-05-27
 

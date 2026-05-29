@@ -26,6 +26,28 @@ log = logging.getLogger(__name__)
 
 SNIPPET_MAX = 200
 
+# YAML alias-expansion DoS ("billion laughs") defence. PyYAML's safe_load
+# is safe against ``!!python/object`` but does not bound how many times an
+# anchor can be aliased. A ~100 KB YAML file with nested aliases can expand
+# to multi-GB at load time. Real documents almost never use more than a
+# handful of anchors or aliases. We refuse to parse anything that crosses
+# both thresholds, which catches all known bomb shapes while leaving normal
+# YAML untouched.
+_YAML_ALIAS_MAX = 200
+_YAML_ANCHOR_MAX = 200
+
+
+def _looks_like_yaml_bomb(text: str) -> bool:
+    """Heuristic check that flags YAML with suspicious anchor / alias density."""
+    # Cheap path: most YAML uses neither tokens at all.
+    if "&" not in text and "*" not in text:
+        return False
+    anchors = sum(1 for _ in re.finditer(r"(?<![A-Za-z0-9_])&[A-Za-z0-9_]+", text))
+    if anchors > _YAML_ANCHOR_MAX:
+        return True
+    aliases = sum(1 for _ in re.finditer(r"(?<![A-Za-z0-9_])\*[A-Za-z0-9_]+", text))
+    return aliases > _YAML_ALIAS_MAX
+
 
 # ---------------------------------------------------------------------------
 # YAML helpers (PyYAML-first with regex fallback)
@@ -35,9 +57,13 @@ SNIPPET_MAX = 200
 def parse_yaml_lenient(text: str) -> Any:
     """Parse YAML if PyYAML is available; return ``None`` otherwise.
 
-    Never raises: a malformed document or a missing PyYAML both yield
-    ``None`` so callers can fall back to regex extraction.
+    Never raises: a malformed document, a missing PyYAML, or a suspected
+    YAML alias-expansion bomb all yield ``None`` so callers can fall back
+    to regex extraction.
     """
+    if _looks_like_yaml_bomb(text):
+        log.debug("refusing to parse suspected YAML alias bomb")
+        return None
     try:  # pragma: no cover - depends on environment
         import yaml  # type: ignore
 

@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import requests
 
@@ -23,6 +24,20 @@ import requests
 COMMENT_MARKER = "<!-- ai-surface-comment v0 -->"
 DEFAULT_WORKSPACE = "/github/workspace"
 BASE_CHECKOUT_PATH = "/tmp/ai-surface-base"
+
+# Refspec validation for refs we hand to git on the command line. Git
+# treats any argv element starting with ``-`` as an option, so an unvalidated
+# ref of e.g. ``--upload-pack=cmd`` would cause ``git fetch`` to execute
+# ``cmd`` as a transport helper. The regex matches what GitHub itself
+# accepts for branch names (letters, digits, dot, dash, underscore, slash)
+# and explicitly cannot start with a dash. In normal use this passes every
+# real branch name; it only rejects refs that look like option flags.
+_SAFE_GIT_REF_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9._/-]{0,254}$")
+
+
+def _is_safe_git_ref(ref: str) -> bool:
+    """Return True if ``ref`` is safe to pass as a git command-line argument."""
+    return bool(_SAFE_GIT_REF_RE.fullmatch(ref))
 
 
 # ---------------------------------------------------------------------------
@@ -94,9 +109,15 @@ def _set_action_output(name: str, value: str) -> None:
     out = os.environ.get("GITHUB_OUTPUT")
     if not out:
         return
+    # Defence-in-depth: a value containing newline or carriage return would
+    # let an attacker inject additional ``key=value`` lines into GITHUB_OUTPUT
+    # that downstream workflow steps then consume as trusted (CVE-2024-27302
+    # class of issue). Today every caller passes a numeric or fixed-string
+    # value so this is hardening, not a live exploit.
+    safe_value = value.replace("\r", " ").replace("\n", " ")
     try:
         with open(out, "a", encoding="utf-8") as f:
-            f.write(f"{name}={value}\n")
+            f.write(f"{name}={safe_value}\n")
     except OSError:
         pass
 
@@ -142,6 +163,16 @@ def _setup_base_checkout(workspace: str) -> Optional[str]:
     """
     base_ref = os.environ.get("GITHUB_BASE_REF")
     if not base_ref:
+        return None
+
+    # Defence-in-depth: validate the ref before handing it to git on the
+    # command line. GitHub itself sets GITHUB_BASE_REF from the PR target
+    # branch (which is constrained by the target repo's branch names), so
+    # in practice this is hardening rather than a live exploit. The validation
+    # rejects refs that begin with ``-`` (which git would treat as an option,
+    # enabling argument-injection patterns such as ``--upload-pack=cmd``).
+    if not _is_safe_git_ref(base_ref):
+        print(f"::warning::base ref {base_ref!r} failed validation; skipping base scan")
         return None
 
     if not (Path(workspace) / ".git").exists():
