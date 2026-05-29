@@ -14,7 +14,7 @@ set -e
 
 # Require ai-surface to be installed
 if ! command -v ai-surface > /dev/null 2>&1; then
-    echo "ai-surface not installed. Install with: pipx install ai-surface"
+    echo "ai-surface not installed. Install with: pipx install git+https://github.com/apisec-inc/AI-Surface@v0.5.3"
     echo "Skipping pre-commit AI surface check."
     exit 0
 fi

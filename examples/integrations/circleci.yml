@@ -15,7 +15,7 @@ jobs:
 
       - run:
           name: Install ai-surface
-          command: pip install ai-surface
+          command: pip install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
 
       - run:
           name: Scan PR head

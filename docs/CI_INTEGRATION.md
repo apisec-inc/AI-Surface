@@ -215,7 +215,7 @@ A `.gitlab-ci.yml` equivalent of the GitHub Action:
 ai-surface:
   image: python:3.11-slim
   before_script:
-    - pip install ai-surface
+    - pip install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
   script:
     - ai-surface scan . --output json > head.json
     - git checkout origin/$CI_DEFAULT_BRANCH

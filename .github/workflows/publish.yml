@@ -1,14 +1,21 @@
-# Publish to PyPI on tag push.
-# Tag format: v0.5.0, v0.6.0, etc.
-# Uses PyPI Trusted Publisher (OIDC) — no API token stored in secrets.
+# Publish to PyPI.
+#
+# Currently MANUAL ONLY. Trigger this workflow by hand from the Actions tab
+# when we are ready to publish a version of ai-surface to PyPI. PyPI
+# publication is deferred until v1.0; until then the project is installable
+# from source (pip install git+https://github.com/apisec-inc/AI-Surface@vX.Y.Z).
+# Deferring PyPI also defers the schema-stability promise that PyPI listing
+# implies for a Python package.
+#
+# Tag format when we do publish: v0.5.0, v1.0.0, etc.
+# Uses PyPI Trusted Publisher (OIDC), no API token stored in secrets.
 # Configure the trusted publisher at https://pypi.org/manage/account/publishing/
+# before the first manual run.
 
 name: Publish to PyPI
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 jobs:
   build:

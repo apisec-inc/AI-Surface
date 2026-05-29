@@ -11,7 +11,7 @@ ai-surface:
   only:
     - merge_requests
   before_script:
-    - pip install ai-surface
+    - pip install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
   script:
     # Scan the head of the MR branch
     - ai-surface scan . --output json > head.json

@@ -22,7 +22,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install ai-surface
-        run: pip install ai-surface
+        run: pip install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
 
       - name: Generate inventory
         run: ai-surface scan . --write-inventory

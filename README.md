@@ -158,18 +158,22 @@ flowchart TB
 
 ## Quick start
 
-```bash
-# Run without installing (recommended for first try)
-pipx run ai-surface scan .
+`ai-surface` installs straight from this GitHub repository. PyPI publication is deferred until v1.0; until then the install commands point at the source repo and a tagged release.
 
-# Or install globally
-pipx install ai-surface
+```bash
+# Install globally with pipx (recommended for a long-lived CLI)
+pipx install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
 ai-surface scan .
 
-# Or in a project venv
-pip install ai-surface
+# Or one-off, no install
+pipx run --spec git+https://github.com/apisec-inc/AI-Surface@v0.5.3 ai-surface scan .
+
+# Or inside a project venv
+pip install git+https://github.com/apisec-inc/AI-Surface@v0.5.3
 ai-surface scan .
 ```
+
+For the GitHub Action, no install is needed (see the [GitHub Action](#github-action) section below for the workflow snippet).
 
 Requires **Python 3.9 or newer**. The CLI scan runs 100% locally with no network calls. See [`docs/PRIVACY.md`](docs/PRIVACY.md) for the full data-handling contract.
 
