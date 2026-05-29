@@ -54,3 +54,7 @@ ai-surface.json
 
 # Local fixtures with real secrets (we use synthetic fixtures only)
 tests/fixtures/private/
+
+# Internal-only GTM / strategy working docs. These live on disk for the
+# maintainer's reference but are not part of the public repo.
+docs/GTM/
