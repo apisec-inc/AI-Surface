@@ -28,19 +28,9 @@ Findings map to the OWASP LLM Top 10 and the EU AI Act, NIST AI RMF, and ISO 420
 
 ![ai-surface attack surface map](https://raw.githubusercontent.com/apisec-inc/AI-Surface/main/docs/images/surface-map.png)
 
-<sub>The <code>--ui</code> map: every detected AI surface as a node, grouped by category, served on loopback.</sub>
+<sub>The optional <code>--ui</code> map shows detected AI surfaces as nodes grouped by category. It is served on loopback and runs locally.</sub>
 
 </div>
-
-## Open the local UI
-
-The map above is the `--ui` view. Once `ai-surface` is installed (see [Quick start](#quick-start)), open it on any repo:
-
-```bash
-ai-surface scan . --ui
-```
-
-It shows the detected AI surfaces as nodes grouped by category, with risk indicators, governance badges, evidence, and an AI-BOM download where available. The UI is served locally over `127.0.0.1` from a temporary directory, so no analysis runs in the browser, no source code leaves your machine, and no telemetry is collected. Press `Ctrl-C` in the terminal to stop the server.
 
 ## Who is this for?
 
@@ -56,12 +46,14 @@ Built for DevOps, DevSecOps, platform engineering, AppSec, and security-minded e
 
 ## Table of Contents
 
-- [Open the local UI](#open-the-local-ui)
 - [Who is this for?](#who-is-this-for)
 - [Quick start](#quick-start)
+- [What the output looks like](#what-the-output-looks-like)
+- [First run on a mature repo](#first-run-on-a-mature-repo)
+- [GitHub Action and CI gating](#github-action-and-ci-gating)
+- [Open the local UI](#open-the-local-ui)
 - [What it detects](#what-it-detects)
 - [Proven on real code](#proven-on-real-code)
-- [GitHub Action and CI gating](#github-action-and-ci-gating)
 - [Output formats](#output-formats)
 - [CLI reference](#cli-reference)
 - [Compliance and governance](#compliance-and-governance)
@@ -71,6 +63,7 @@ Built for DevOps, DevSecOps, platform engineering, AppSec, and security-minded e
 - [Roadmap](#roadmap)
 - [Runtime validation](#runtime-validation)
 - [Development](#development)
+- [Project](#project)
 - [License](#license)
 
 ## Quick start
@@ -171,6 +164,60 @@ ai-surface scan . --baseline --fail-on high   # 3. in CI, fail only on NEW high+
 
 `--baseline --fail-on high` is the recommended PR gate: low-noise, non-blocking on pre-existing debt, and actionable.
 
+## GitHub Action and CI gating
+
+Drop this into `.github/workflows/ai-surface.yml`:
+
+```yaml
+name: AI Surface Check
+on: [pull_request]
+
+permissions:
+  contents: read
+  pull-requests: write   # required when comment-on-pr is true
+
+jobs:
+  ai-surface:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # required for base-vs-head diff
+      - uses: apisec-inc/AI-Surface@v1
+        with:
+          path: '.'
+          comment-on-pr: 'true'
+          fail-on: 'high'  # fail only on NEW high-or-critical findings
+```
+
+Every PR gets a sticky comment showing what changed in the PR, not just the current repo state. `fail-on` gates on assessed severity, so inventory-only findings do not fail the build. With `fail-on: high`, the build fails only when the PR introduces a new high-or-critical finding.
+
+No API keys are required. The action uses the built-in `GITHUB_TOKEN` to post or update the PR comment.
+
+For non-GitHub CI, the gate is just an exit code:
+
+```bash
+ai-surface scan . --fail-on high
+```
+
+See [`docs/CI_INTEGRATION.md`](https://github.com/apisec-inc/AI-Surface/blob/main/docs/CI_INTEGRATION.md) for permissions, fork PR behavior, baseline options, SARIF upload, policy files, and multi-repo rollups.
+
+## Open the local UI
+
+After installing `ai-surface`, you can open the interactive AI attack-surface map from any repo:
+
+```bash
+ai-surface scan . --ui
+```
+
+The UI shows detected AI surfaces as nodes grouped by category, with risk indicators, governance badges, evidence, and AI-BOM download where available.
+
+The UI is served locally over `127.0.0.1` from a temporary directory.
+
+The analysis never runs in the browser, your source code never leaves your machine, and no telemetry is collected.
+
+To stop the local UI server, press `Ctrl-C` in the terminal.
+
 ## What it detects
 
 `ai-surface` looks for eight categories of AI surface. Configuration files, provider keys, manifests, and specs are detected across stacks; deeper code-level detection is strongest today for Python and TypeScript/JavaScript. See [`docs/LANGUAGE_SUPPORT.md`](https://github.com/apisec-inc/AI-Surface/blob/main/docs/LANGUAGE_SUPPORT.md) for the full matrix.
@@ -218,44 +265,6 @@ Full methodology, per-app appendix, framework/library appendix, and caveats are 
 ![State of AI Surface report](https://raw.githubusercontent.com/apisec-inc/AI-Surface/main/docs/images/state-of-ai-surface.png)
 
 </div>
-
-## GitHub Action and CI gating
-
-Drop this into `.github/workflows/ai-surface.yml`:
-
-```yaml
-name: AI Surface Check
-on: [pull_request]
-
-permissions:
-  contents: read
-  pull-requests: write   # required when comment-on-pr is true
-
-jobs:
-  ai-surface:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0   # required for base-vs-head diff
-      - uses: apisec-inc/AI-Surface@v1
-        with:
-          path: '.'
-          comment-on-pr: 'true'
-          fail-on: 'high'  # fail only on NEW high-or-critical findings
-```
-
-Every PR gets a sticky comment showing what changed in the PR, not just the current repo state. `fail-on` gates on assessed severity, so inventory-only findings do not fail the build. With `fail-on: high`, the build fails only when the PR introduces a new high-or-critical finding.
-
-No API keys are required. The action uses the built-in `GITHUB_TOKEN` to post or update the PR comment.
-
-For non-GitHub CI, the gate is just an exit code:
-
-```bash
-ai-surface scan . --fail-on high
-```
-
-See [`docs/CI_INTEGRATION.md`](https://github.com/apisec-inc/AI-Surface/blob/main/docs/CI_INTEGRATION.md) for permissions, fork PR behavior, baseline options, SARIF upload, policy files, and multi-repo rollups.
 
 ## Output formats
 
