@@ -12,7 +12,11 @@ RUN apt-get update \
 WORKDIR /action
 
 # Copy the action repo (this Dockerfile sits at the root of the action repo).
+# README.md is required: pyproject declares `readme = "README.md"`, so the
+# hatchling build reads it to generate package metadata. Without it the
+# `pip install /action` below fails with "Readme file does not exist".
 COPY pyproject.toml /action/pyproject.toml
+COPY README.md /action/README.md
 COPY src /action/src
 COPY .github /action/.github
 

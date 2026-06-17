@@ -31,6 +31,65 @@ class RepoError(RuntimeError):
     """A clone could not be performed. Message is safe to show the user."""
 
 
+def _origin_url(git_config_text: str) -> str:
+    """Return the ``origin`` remote URL from a .git/config body, or ''."""
+    in_origin = False
+    for raw in git_config_text.splitlines():
+        line = raw.strip()
+        if line.startswith("["):
+            in_origin = line.replace(" ", "").lower() == '[remote"origin"]'
+            continue
+        if in_origin and line.lower().startswith("url"):
+            parts = line.split("=", 1)
+            if len(parts) == 2:
+                return parts[1].strip()
+    return ""
+
+
+def _normalize_repo(url: str) -> str:
+    """Normalize a git remote URL to ``owner/repo`` (known forges) or ``host/path``.
+
+    Strips a trailing ``.git`` and any embedded credentials (``user:token@``) so
+    a tokenized remote can never leak into a report.
+    """
+    u = url.strip()
+    if u.endswith(".git"):
+        u = u[:-4]
+    host = path = ""
+    ssh = re.match(r"^[\w.-]+@([^:]+):(.+)$", u)  # git@github.com:owner/repo
+    if ssh:
+        host, path = ssh.group(1), ssh.group(2)
+    else:
+        https = re.match(r"^[a-zA-Z]+://([^/]+)/(.+)$", u)
+        if https:
+            host, path = https.group(1), https.group(2)
+        else:
+            return ""  # unrecognized form; don't guess
+    if "@" in host:  # strip userinfo / credentials
+        host = host.rsplit("@", 1)[-1]
+    host = host.split(":", 1)[0]  # drop any :port
+    if host.lower() in ("github.com", "gitlab.com", "bitbucket.org"):
+        return path
+    return f"{host}/{path}"
+
+
+def detect_repository(scan_root: str) -> str:
+    """Best-effort origin remote of the scanned repo as ``owner/repo``.
+
+    Reads ``<scan_root>/.git/config`` directly (no subprocess, no network).
+    Returns '' when the path is not a git repo or has no origin remote.
+    """
+    cfg = Path(scan_root) / ".git" / "config"
+    if not cfg.is_file():
+        return ""
+    try:
+        text = cfg.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    url = _origin_url(text)
+    return _normalize_repo(url) if url else ""
+
+
 def _validate_url(url: str) -> None:
     if not url or not _URL_RE.match(url):
         raise RepoError(

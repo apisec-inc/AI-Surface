@@ -388,3 +388,68 @@ def test_baseline_added_surface_counts_its_risks_as_new(tmp_path) -> None:
     )
     assert result.exit_code == 1
     assert "1 new" in result.output
+
+
+# ---------------------------------------------------------------------------
+# Markdown emission must be raw (regression guard)
+#
+# The GitHub Action captures `scan --output markdown` and `compare ... --output
+# markdown` stdout verbatim and posts it as a PR comment. If that output is
+# routed through the rich console it gets hard-wrapped at the console width
+# (splitting long URLs so the links die) and single-token link labels such as
+# [ai-surface] are consumed as rich markup. These tests assert the raw markdown
+# survives the CLI boundary intact. They fail if emission regresses to
+# console.print().
+# ---------------------------------------------------------------------------
+
+import re  # noqa: E402
+
+# Build the key at runtime so the literal Stripe key never appears in source:
+# GitHub push protection blocks a contiguous sk_live_ key, but the detector
+# still matches the assembled value (sk_live_ + 24+ alphanumerics) at test time.
+_FAKE_STRIPE_KEY = "sk_live_" + "AbCdEf01" * 4
+_MCP_FIXTURE = (
+    '{ "mcpServers": { "payments": { "command": "node", "args": ["s.js"], '
+    '"env": { "STRIPE_SECRET_KEY": "' + _FAKE_STRIPE_KEY + '" } } } }'
+)
+_AI_SURFACE_LABEL = "[ai-surface](https://github.com/apisec-inc/AI-Surface)"
+# A raw newline inside a (...) markdown link target means a URL was wrapped.
+_SPLIT_URL_RE = re.compile(r"\(https?://[^)\s\n]*\n")
+
+
+def _assert_markdown_intact(md: str) -> None:
+    assert _AI_SURFACE_LABEL in md, "single-token link label was eaten as rich markup"
+    assert not _SPLIT_URL_RE.search(md), "a URL was wrapped across lines (links break)"
+
+
+def test_scan_markdown_output_is_raw_not_rich_wrapped(tmp_path) -> None:
+    (tmp_path / ".mcp.json").write_text(_MCP_FIXTURE, encoding="utf-8")
+    result = runner.invoke(app, ["scan", str(tmp_path), "--output", "markdown"])
+    assert result.exit_code == 0
+    _assert_markdown_intact(result.stdout)
+
+
+def test_compare_markdown_output_is_raw_not_rich_wrapped(tmp_path) -> None:
+    base = tmp_path / "base"
+    head = tmp_path / "head"
+    base.mkdir()
+    head.mkdir()
+    (head / ".mcp.json").write_text(_MCP_FIXTURE, encoding="utf-8")
+
+    base_json = tmp_path / "base.json"
+    head_json = tmp_path / "head.json"
+    base_json.write_text(
+        runner.invoke(app, ["scan", str(base), "--output", "json"]).stdout,
+        encoding="utf-8",
+    )
+    head_json.write_text(
+        runner.invoke(app, ["scan", str(head), "--output", "json"]).stdout,
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        app, ["compare", str(base_json), str(head_json), "--output", "markdown"]
+    )
+    assert result.exit_code == 0
+    assert "1 new" in result.stdout
+    _assert_markdown_intact(result.stdout)

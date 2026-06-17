@@ -610,16 +610,18 @@ code, pre, .mono { font-family: var(--font-mono); }
 .trust-badge.verified { color: var(--sev-low); border-color: color-mix(in srgb, var(--sev-low) 35%, transparent); }
 .trust-badge.unknown { color: var(--text-3); }
 
-.dr-bridge { display: block; text-decoration: none; padding: 15px 17px; border-radius: var(--radius-sm);
+.dr-bridge { display: block; text-decoration: none; padding: 11px 14px; border-radius: var(--radius-sm);
   background: linear-gradient(110deg, color-mix(in srgb, var(--brand) 16%, transparent),
     color-mix(in srgb, var(--brand-2) 8%, transparent));
   border: 1px solid color-mix(in srgb, var(--brand) 30%, transparent);
   transition: var(--fast) var(--ease); }
-.dr-bridge + .dr-bridge { margin-top: 9px; }
-.dr-bridge:hover { border-color: var(--brand); box-shadow: 0 12px 28px -16px var(--glow); transform: translateY(-1px); }
-.dr-bridge .sku { font-family: var(--font-mono); font-size: 10px; letter-spacing: .06em;
-  text-transform: uppercase; color: var(--brand); }
-.dr-bridge .lbl { display: block; margin-top: 4px; font-size: 13.5px; color: var(--text); font-weight: 540; }
+.dr-bridge + .dr-bridge { margin-top: 8px; }
+a.dr-bridge:hover { border-color: var(--brand); box-shadow: 0 12px 28px -16px var(--glow); transform: translateY(-1px); }
+.dr-bridge .lbl { display: block; font-size: 13px; color: var(--text); font-weight: 540; }
+/* surfaces the platform does not validate yet: shown, but not actionable */
+.dr-bridge.disabled { background: var(--bg-2); border-color: var(--line); opacity: .65;
+  cursor: default; box-shadow: none; }
+.dr-bridge.disabled .lbl { color: var(--text-2); font-weight: 500; }
 
 /* tooltip (OWASP) */
 .tip { position: fixed; z-index: 200; max-width: 280px; pointer-events: none;

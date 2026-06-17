@@ -1,5 +1,10 @@
-# Example workflow showing how downstream consumers wire ai-surface into their CI.
-# Drop this (or a copy) into your own repo's .github/workflows/ to enable PR comments.
+# Self-test: runs THIS repo's action (uses: ./) on every PR so changes to the
+# action (Dockerfile, entry script, CLI output) are validated before release and
+# the tool dogfoods itself, posting a live PR comment.
+#
+# Downstream consumers should instead pin the published action:
+#   - uses: apisec-inc/AI-Surface@v1
+# See README.md and docs/CI_INTEGRATION.md for the copy-paste consumer workflow.
 
 name: AI Surface Check
 
@@ -20,7 +25,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run ai-surface
-        uses: apisec-inc/AI-Surface@v1
+        uses: ./
         with:
           path: '.'
           comment-on-pr: 'true'

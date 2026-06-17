@@ -1,5 +1,5 @@
 name: 'AI Surface Check'
-description: 'Inventory production AI surfaces (LLM SDKs, agent frameworks, MCP servers) in your codebase. Posts a PR comment.'
+description: 'Map AI attack surfaces in pull requests and gate new high-risk findings before merge.'
 author: 'APIsec'
 branding:
   icon: 'eye'

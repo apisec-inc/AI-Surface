@@ -20,6 +20,7 @@ document that will be posted as a PR comment on GitHub):
 from __future__ import annotations
 
 from ..cross_promo import build_upgrade_url, headline_finding, specialists_for_report
+from ..frameworks import standards_for_flag
 from ..types import (
     CATEGORY_AGENT_FRAMEWORK,
     CATEGORY_AI_INFRA,
@@ -255,6 +256,14 @@ def _append_audit(out: list[str], finding: Finding) -> None:
             if rf.owasp:
                 owasp = ", ".join(f"`{_sanitise_inline(o, max_len=20)}`" for o in rf.owasp)
                 out.append(f"  - OWASP: {owasp}")
+            standards = standards_for_flag(rf.flag)
+            if standards:
+                gov = ", ".join(
+                    f"{_sanitise_inline(s['framework'], max_len=30)} "
+                    f"{_sanitise_inline(s['clause'], max_len=20)}"
+                    for s in standards
+                )
+                out.append(f"  - Governance: {gov}")
             if rf.remediation:
                 out.append(f"  - Fix: {_sanitise_inline(rf.remediation)}")
         out.append("")
@@ -322,7 +331,7 @@ def _append_footer(out: list[str], report: Report) -> None:
     upgrade_url = build_upgrade_url(headline, source="ai-surface", medium="markdown")
     out.append(
         "Validate which of these surfaces are exploitable in a running application: "
-        f"[apisec.ai/ai-validation]({upgrade_url})"
+        f"[apisec.ai/products]({upgrade_url})"
     )
     out.append("")
 

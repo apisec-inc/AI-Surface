@@ -1,25 +1,28 @@
 # Compliance and governance mapping
 
-`ai-surface` maps every audited finding to the **OWASP LLM Top 10** and to the
-specific **EU AI Act**, **NIST AI RMF**, and **ISO/IEC 42001** clauses it
-evidences. This document is the authoritative reference for those mappings.
+`ai-surface` maps audited findings to the OWASP LLM Top 10 and to evidence-relevant clauses in the EU AI Act, NIST AI RMF, and ISO/IEC 42001. This document is the reference for those mappings.
 
-## The honesty boundary (read this first)
+## Scope and assurance boundary
 
-`ai-surface` **produces evidence**. It does **not** certify, attest, or assert
-compliance, and it cannot make you compliant.
+`ai-surface` produces structured evidence for AI governance review. It does not certify, attest, or assert compliance.
 
-- It contributes to the *inventory*, *documentation*, *risk-identification*, and
-  *monitoring-gap* requirements of these frameworks.
-- A framework requirement is reported as covered **only when the scan actually
-  produced that kind of evidence**. An empty repo maps to nothing.
-- The mappings flag where a finding *implicates* a clause for review. They are
-  not a legal adjudication that the clause is violated.
-- Compliance also requires organizational process, human judgement, and controls
-  that live outside source code and outside this tool.
+What it can provide:
 
-Use the output as defensible input to your AI governance process, not as a
-certificate.
+- an inventory of AI surfaces found in source code
+- AI-BOM output in CycloneDX format
+- risk indicators and audited findings where enough evidence exists
+- framework mappings tied to the evidence produced
+- signals for review, such as missing observability, missing human oversight, PII-to-prompt flow, or high-blast-radius agent authority
+
+What remains outside the tool:
+
+- legal interpretation of regulatory obligations
+- organizational policies and approvals
+- runtime behavior and exploitability validation
+- human review and acceptance of risk
+- operational controls that do not appear in source code
+
+A framework requirement is reported only when the analysis produced supporting evidence. An empty repo maps to nothing. Use the output as structured evidence for your AI governance process, not as a certification artifact.
 
 ## Evidence kinds
 

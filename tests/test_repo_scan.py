@@ -84,3 +84,33 @@ def test_ui_resolve_local_path_bad_dir_raises() -> None:
 
     with pytest.raises(FileNotFoundError):
         _resolve_local_path("/no/such/dir/anywhere/xyz")
+
+
+def test_detect_repository_from_git_config(tmp_path) -> None:
+    from ai_surface.repo import detect_repository
+
+    gitdir = tmp_path / ".git"
+    gitdir.mkdir()
+    (gitdir / "config").write_text(
+        '[core]\n\trepositoryformatversion = 0\n'
+        '[remote "origin"]\n\turl = https://github.com/apisec-inc/AI-Surface.git\n',
+        encoding="utf-8",
+    )
+    assert detect_repository(str(tmp_path)) == "apisec-inc/AI-Surface"
+
+
+def test_detect_repository_strips_credentials_and_ssh() -> None:
+    from ai_surface.repo import _normalize_repo
+
+    # embedded token must never leak
+    assert _normalize_repo("https://x-access-token:ghp_secret@github.com/o/r.git") == "o/r"
+    # ssh form
+    assert _normalize_repo("git@github.com:o/r.git") == "o/r"
+    # self-hosted keeps host
+    assert _normalize_repo("https://git.example.com/team/app.git") == "git.example.com/team/app"
+
+
+def test_detect_repository_none_when_not_a_repo(tmp_path) -> None:
+    from ai_surface.repo import detect_repository
+
+    assert detect_repository(str(tmp_path)) == ""

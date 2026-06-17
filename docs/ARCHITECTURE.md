@@ -13,7 +13,7 @@ This document is for contributors and operators who want to understand the tool 
 - [Scan lifecycle](#scan-lifecycle)
 - [Reporter contracts](#reporter-contracts)
 - [The diff engine](#the-diff-engine)
-- [Cross-promotion module](#cross-promotion-module)
+- [Validation and next-step links](#validation-and-next-step-links)
 - [GitHub Action wrapper](#github-action-wrapper)
 - [Adding a new detector](#adding-a-new-detector)
 - [Performance characteristics](#performance-characteristics)
@@ -22,10 +22,10 @@ This document is for contributors and operators who want to understand the tool 
 
 `ai-surface` was designed against these constraints:
 
-1. **Static-only.** No code execution, no network calls, no credentials. The tool must work on a developer laptop with no setup beyond `pip install`.
+1. **Local and static.** The CLI executes no code, makes no network calls, and needs no credentials; it runs on a developer laptop with nothing beyond a `pipx` / `uvx` / `pip` install. (The GitHub Action's only network call is posting a PR comment via GitHub's API; see the network boundary in the Action section.)
 2. **Stateless per run.** Each scan walks the file tree from scratch. No persistent cache, no daemon, no incremental analysis. Cross-file effects mean incremental analysis would have to recompute most of the same work for correctness.
 3. **Conservative findings.** False positives kill adoption faster than false negatives. We'd rather miss a surface than flag a non-surface.
-4. **Composable outputs.** The same scan output feeds local dev, CI, audit logs, and the cross-promo to the APIsec platform. One scan, many consumers.
+4. **Composable outputs.** The same scan output feeds local dev, CI, audit logs, the AI-BOM, and optional next-step validation links. One scan, many consumers.
 5. **Detector isolation.** A buggy detector should not kill the whole scan. The orchestrator catches per-detector exceptions and emits them as report errors.
 
 ## Component overview
@@ -35,20 +35,20 @@ flowchart TB
     CLI[cli.py - Typer entry point]
     Orch[orchestrator.py - aggregates findings]
     Det[detectors/ - one module per category]
-    Rep[reporters/ - terminal, JSON, markdown]
+    Rep[reporters/ - terminal, JSON, markdown, CycloneDX, SARIF, UI]
     Diff[diff.py - base vs head comparison]
     Walk[utils/walk.py - file walker, root .gitignore only]
-    Xpromo[cross_promo.py - UTM links to specialists + platform]
+    Links[cross_promo.py - optional next-step validation links]
 
     CLI --> Orch
     Orch --> Det
     Det --> Walk
     Orch --> Rep
     CLI --> Diff
-    Rep --> Xpromo
+    Rep --> Links
 ```
 
-Each detector module is independent. They run sequentially today (v0.5), but parallel execution is on the roadmap for v1.0.
+Each detector module is independent. They run sequentially today; parallel execution is on the roadmap.
 
 ## The data model
 
@@ -66,23 +66,31 @@ class Evidence:
 @dataclass
 class Finding:
     surface: str                  # Display name (e.g. "LangChain Agent: refund_agent")
-    category: str                 # One of: mcp-server, llm-sdk, agent-framework, env-key, model-gateway, ai-infra
+    category: str                 # e.g. agent-framework, mcp-server, vector-store, llm-sdk, api, model-gateway, ai-infra, env-key
     evidence: Evidence
     permissions: list[str]        # Tools or capabilities exposed
-    risk_indicators: list[str]    # Conservative semantic flags
+    risk_indicators: list[str]    # Conservative, severity-free semantic flags
     detector_name: str            # Set by orchestrator
+    severity: str | None          # Set only by the deep-dive audit; None for inventory findings
+    audit: Audit | None           # Risk flags (OWASP + governance clauses), secrets, trust
+    bridges: list[Bridge]         # Optional next-step validation links
+    disposition: str              # resolve-here vs validate-runtime
 
 
 @dataclass
 class Report:
     findings: list[Finding]
-    scan_root: str
+    scan_root: str                # basename only (privacy-safe)
     scan_timestamp: str           # ISO 8601 with timezone
     detectors_run: list[str]
+    schema_version: str           # frozen report contract (docs/SCHEMA_v1.md)
+    tool_version: str
+    repository: str               # origin remote (owner/repo) from .git/config; credentials stripped
     errors: list[str]             # Per-detector failures, captured not raised
+    summary: Summary | None       # Aggregates for UI / CI
 ```
 
-**The contract is stable across reporters.** Terminal, JSON, markdown, and diff all consume the same `Report`: New reporters just need to consume this shape.
+**The contract is stable across reporters.** Every reporter (terminal, JSON, markdown, CycloneDX, SARIF) and the diff engine consume the same `Report`. The JSON envelope is frozen as schema 1.0 (see [docs/SCHEMA_v1.md](SCHEMA_v1.md)); a new reporter just consumes this shape.
 
 ## Detector protocol
 
@@ -135,13 +143,17 @@ Per-detector errors are caught by the orchestrator. A detector that raises is re
 
 ## Reporter contracts
 
-Three reporters ship with v0.5:
+The core reporters are:
 
 | Reporter | Use case | Output |
 |---|---|---|
-| `terminal_reporter.py` | Local dev, interactive | Rich-styled stdout with colors, sections, click-through links |
-| `json_reporter.py` | CI scripting, programmatic | Schema-versioned JSON envelope |
-| `markdown_reporter.py` | Reports, `.ai-inventory.md`, PR comments | Markdown with headings and risk callouts |
+| `terminal_reporter.py` | Local dev, interactive | Rich-styled stdout: sections, severities, OWASP + governance mappings |
+| `json_reporter.py` | CI scripting, programmatic | Schema-1.0 JSON envelope |
+| `markdown_reporter.py` | `.ai-inventory.md`, PR comments | Markdown with headings and risk callouts |
+| `cyclonedx_reporter.py` | AI-BOM / governance artifact | CycloneDX document |
+| `sarif_reporter.py` | GitHub code scanning | SARIF 2.1.0 |
+
+The CLI also serves an interactive `--ui` attack-surface map on loopback, and the `--write-inventory` / `--quiet` modes reuse the markdown output and a one-line summary.
 
 Each reporter exposes a function with the same shape:
 
@@ -150,14 +162,14 @@ def render_<format>(report: Report, ...) -> str | None:
     ...
 ```
 
-Terminal renders directly to a `rich.Console`: JSON and markdown return strings the CLI prints. Adding a reporter (e.g., SARIF, CycloneDX): implement a `render_sarif(report) -> str`, register it in `cli.py`, add tests.
+Terminal renders directly to a `rich.Console`; the others return strings the CLI prints. Adding a reporter: implement `render_<format>(report) -> str`, register it in `cli.py`, add tests.
 
 ## The diff engine
 
 `diff.py` computes the delta between two scans. Used by:
 
 1. The `ai-surface compare base.json head.json` CLI command
-2. The GitHub Action, which scans the PR head and diffs against `.ai-inventory.md` from the base branch
+2. The GitHub Action, which analyzes the PR head and the PR base (a git worktree of the base ref) and diffs head against base
 
 The diff algorithm:
 
@@ -175,9 +187,9 @@ flowchart LR
 
 Surfaces are matched by a stable `surface_id` derived from category + surface name + primary file path. This is the contract that the future specialist CLIs (`mcp-audit`, `agent-audit`, etc.) will share. same `surface_id` means same surface, enabling cross-tool joins.
 
-## Cross-promotion module
+## Validation and next-step links
 
-`cross_promo.py` is the link between OSS findings and the paid platform (and between OSS tools themselves).
+`cross_promo.py` builds optional links from findings to deeper validation workflows and companion OSS tools. Links are rendered only in user-facing output and transmit no finding data.
 
 ```python
 SPECIALIST_TOOLS = {
@@ -191,21 +203,13 @@ SPECIALIST_TOOLS = {
         "tool": "agent-audit",
         "url": "https://github.com/apisec-inc/agent-audit",
         "tagline": "deep audit of agent tool authority and blast radius",
-        "available": False,  # Not yet shipped. hidden from output
+        "available": False,  # not yet shipped; hidden from output
     },
     ...
 }
 ```
 
-When a finding has risk indicators, the reporter calls `build_upgrade_url(finding, source="ai-surface", medium="cli")` to construct a UTM-tagged deep link to the APIsec platform validation page. Each deep link carries:
-
-- `surface`: the category
-- `risk`: the primary risk indicator
-- `utm_source`: always `ai-surface`
-- `utm_medium`. `cli` / `markdown` / `pr-comment` / etc.
-- `utm_campaign`. `oss-funnel`
-
-This is how we close the loop from OSS discovery to platform validation.
+When a finding carries risk indicators, the reporter calls `build_upgrade_url(finding, ...)` to construct a deep link to the relevant validation workflow. The link encodes the finding's category and primary risk indicator, plus UTM parameters for attribution. It is a URL only; no source, findings, or metadata are transmitted.
 
 ## GitHub Action wrapper
 
@@ -224,21 +228,24 @@ sequenceDiagram
     Entry->>AS: ai-surface scan . --output json
     AS-->>Entry: head report JSON
 
-    alt .ai-inventory.md exists on base branch
-        Entry->>Entry: read committed baseline
-    else fallback
-        Entry->>AS: ai-surface scan (base checkout) --output json
+    alt base ref reachable (fetch-depth: 0)
+        Entry->>Entry: git worktree of GITHUB_BASE_REF
+        Entry->>AS: ai-surface scan (base worktree) --output json
         AS-->>Entry: base report JSON
+        Entry->>AS: ai-surface compare base.json head.json
+        AS-->>Entry: diff markdown (new / modified / removed)
+    else base ref unavailable (push, first PR, fork)
+        Entry->>Entry: fall back to a full current-state inventory
     end
 
-    Entry->>AS: ai-surface compare base head
-    AS-->>Entry: diff markdown
     Entry->>API: POST sticky PR comment
     API-->>Entry: comment URL
-    Entry->>CI: exit code (0 or 1 based on fail-on-risk)
+    Entry->>CI: exit code (0 or 1 based on fail-on / fail-on-risk)
 ```
 
-The Action is a thin shell. All the logic is in the Python CLI; the Action just orchestrates the scan, comparison, and comment posting. This makes the local CLI and CI behavior strictly equivalent.
+The Action is a thin shell. All the logic is in the Python CLI; the Action just orchestrates the analysis, comparison, and comment posting, so local CLI and CI behavior stay consistent.
+
+**Network boundary.** The local CLI performs no network calls. When `comment-on-pr` is enabled in GitHub Actions, the action uses the repository's `GITHUB_TOKEN` to post or update a PR comment through the GitHub API. It does not send source code, findings, or metadata to APIsec.
 
 ## Adding a new detector
 
@@ -254,7 +261,7 @@ A reasonable detector PR adds 100-300 lines of code, 50-150 lines of test covera
 
 ## Performance characteristics
 
-`ai-surface` is built for sub-second scans on typical project repos.
+`ai-surface` is built for fast local feedback on typical project repos.
 
 | Repo size (relevant files) | Typical scan time |
 |---|---|
@@ -263,7 +270,7 @@ A reasonable detector PR adds 100-300 lines of code, 50-150 lines of test covera
 | 200-500 files | 1-2s |
 | 500-2,000 files | 2-5s |
 | 2,000-10,000 files | 5-10s |
-| Larger monorepos | TBD; v1.0 work |
+| Larger monorepos | scales with file count; bounded by the walker caps |
 
 Time is more sensitive to **how many surfaces exist** than to file count. Repos with zero AI surfaces scan very fast because we walk fast and decline to match fast. Repos with active AI surfaces take longer because we extract per-finding metadata (models, tool lists, file evidence).
 

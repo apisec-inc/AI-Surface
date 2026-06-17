@@ -1,17 +1,93 @@
 {
-  "schema_version": "0.5",
-  "tool_version": "0.5.3",
+  "schema_version": "1.0",
+  "tool_version": "1.0.0",
   "scan_root": "demo-app",
-  "scan_timestamp": "2026-05-29T13:43:27.760413+00:00",
+  "repository": "",
+  "scan_timestamp": "2026-06-17T20:28:34.085074+00:00",
   "detectors_run": [
-    "mcp_servers",
+    "mcp_audit",
     "llm_sdks",
     "agent_frameworks",
     "env_keys",
     "model_gateways",
-    "ai_infra"
+    "ai_infra",
+    "api_endpoints",
+    "vector_rag"
   ],
-  "findings_count": 12,
+  "findings_count": 19,
+  "summary": {
+    "total_findings": 19,
+    "by_category": {
+      "mcp-server": 3,
+      "llm-sdk": 3,
+      "agent-framework": 3,
+      "env-key": 1,
+      "model-gateway": 1,
+      "ai-infra": 2,
+      "api": 4,
+      "vector-store": 2
+    },
+    "by_severity": {
+      "medium": 1,
+      "high": 3
+    },
+    "top_risks": [
+      "MCP Server: stripe-mcp: MCP exposes financial tools (refund, charge, payout) to the model.",
+      "MCP Server: stripe-mcp: High-risk action (financial-action) runs with no human approval / in-the-loop gate detected",
+      "MCP Server (in-house): src/orders_mcp_server.py: MCP exposes financial tools (refund, charge, payout) to the model.",
+      "MCP Server (in-house): src/orders_mcp_server.py: High-risk action (financial-action) runs with no human approval / in-the-loop gate detected",
+      "LangChain Agent: support_agent (in src/chat_agent.py): Agent can invoke financial tools (refund_payment)",
+      "LangChain Agent: support_agent (in src/chat_agent.py): Agent combines broad read access with financial/destructive actions",
+      "LangChain Agent: support_agent (in src/chat_agent.py): High-risk action (financial-action, high-blast-radius) runs with no human approval / in-the-loop gate detected",
+      "MCP Server: github-mcp: MCP connects to a remote server via URL; server security and availability affect trust.",
+      "MCP Server: github-mcp: MCP is granted broad permissions (admin/write/delete/wildcard scopes).",
+      "MCP Server: stripe-mcp: MCP is not from a known/verified publisher; its behaviour and security posture are unknown."
+    ],
+    "bridges_available": [
+      "mcp-runtime",
+      "agent-validation",
+      "api-runtime"
+    ],
+    "resolve_here_count": 9,
+    "validate_runtime_count": 10
+  },
+  "frameworks": [
+    {
+      "id": "eu-ai-act",
+      "name": "EU AI Act",
+      "provides": [
+        "Technical documentation and record-keeping (Art. 11-12)",
+        "Risk management of AI systems (Art. 9)",
+        "Human oversight of high-risk actions (Art. 14)",
+        "Data governance for AI systems (Art. 10)"
+      ]
+    },
+    {
+      "id": "nist-ai-rmf",
+      "name": "NIST AI RMF",
+      "provides": [
+        "Map: inventory and context of AI systems",
+        "Measure: identify and assess AI risks",
+        "Measure: data privacy and provenance"
+      ]
+    },
+    {
+      "id": "iso-42001",
+      "name": "ISO/IEC 42001",
+      "provides": [
+        "AI system inventory (Annex A)",
+        "AI risk assessment",
+        "Data for AI systems (Annex A.7)"
+      ]
+    },
+    {
+      "id": "owasp-llm",
+      "name": "OWASP LLM Top 10",
+      "provides": [
+        "Mapping of findings to LLM Top 10 categories"
+      ]
+    }
+  ],
   "findings": [
     {
       "surface": "MCP Server: github-mcp",
@@ -24,11 +100,25 @@
         "line_numbers": [],
         "metadata": {
           "server_name": "github-mcp",
+          "source": "config",
+          "server_type": "remote",
+          "mcp_source": "https://mcp.github.com/sse",
+          "tools": [
+            "repo:read",
+            "issues:write",
+            "admin"
+          ],
           "config_keys": [
             "tools",
             "url"
           ],
-          "source": "config"
+          "reaches": [
+            {
+              "category": "sse",
+              "url": "https://mcp.github.com/sse",
+              "source_key": "url"
+            }
+          ]
         }
       },
       "permissions": [
@@ -37,9 +127,62 @@
         "admin"
       ],
       "risk_indicators": [
+        "remote MCP endpoint",
         "broad permissions"
       ],
-      "detector_name": "mcp_servers"
+      "detector_name": "mcp_audit",
+      "severity": "medium",
+      "audit": {
+        "risk_flags": [
+          {
+            "flag": "remote-mcp",
+            "severity": "medium",
+            "description": "MCP connects to a remote server via URL; server security and availability affect trust.",
+            "owasp": [
+              "LLM03",
+              "LLM10"
+            ],
+            "remediation": "Verify the remote server is trusted; require HTTPS and validate certificates.",
+            "standards": [
+              {
+                "framework": "ISO 42001",
+                "framework_id": "iso-42001",
+                "clause": "A.10"
+              }
+            ]
+          },
+          {
+            "flag": "broad-permissions",
+            "severity": "medium",
+            "description": "MCP is granted broad permissions (admin/write/delete/wildcard scopes).",
+            "owasp": [
+              "LLM06"
+            ],
+            "remediation": "Scope permissions to the minimum the workflow requires.",
+            "standards": []
+          }
+        ],
+        "secrets": [],
+        "trust_score": 90.0,
+        "trust_label": "verified",
+        "registry_match": "known",
+        "owasp_mappings": [
+          "LLM03",
+          "LLM10",
+          "LLM06"
+        ]
+      },
+      "bridges": [
+        {
+          "sku": "mcp-runtime",
+          "label": "Coming soon: MCP runtime validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=remote-mcp&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this MCP server's tools be abused at runtime (tool abuse, agent-to-tool BOLA/BFLA, over-provisioned permissions)?"
     },
     {
       "surface": "MCP Server: stripe-mcp",
@@ -52,12 +195,19 @@
         "line_numbers": [],
         "metadata": {
           "server_name": "stripe-mcp",
+          "source": "config",
+          "server_type": "npm",
+          "mcp_source": "@stripe/mcp-server",
+          "tools": [
+            "read_charges",
+            "refund",
+            "customer:read"
+          ],
           "config_keys": [
             "args",
             "command",
             "tools"
-          ],
-          "source": "config"
+          ]
         }
       },
       "permissions": [
@@ -66,9 +216,84 @@
         "customer:read"
       ],
       "risk_indicators": [
+        "unverified source",
         "financial action exposed"
       ],
-      "detector_name": "mcp_servers"
+      "detector_name": "mcp_audit",
+      "severity": "high",
+      "audit": {
+        "risk_flags": [
+          {
+            "flag": "unverified-source",
+            "severity": "medium",
+            "description": "MCP is not from a known/verified publisher; its behaviour and security posture are unknown.",
+            "owasp": [
+              "LLM03"
+            ],
+            "remediation": "Review the source before use; prefer official/verified MCPs; run unverified MCPs in isolation.",
+            "standards": [
+              {
+                "framework": "ISO 42001",
+                "framework_id": "iso-42001",
+                "clause": "A.10"
+              }
+            ]
+          },
+          {
+            "flag": "financial-action",
+            "severity": "high",
+            "description": "MCP exposes financial tools (refund, charge, payout) to the model.",
+            "owasp": [
+              "LLM06"
+            ],
+            "remediation": "Gate financial tools behind human approval.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 9"
+              }
+            ]
+          },
+          {
+            "flag": "no-human-oversight",
+            "severity": "high",
+            "description": "High-risk action (financial-action) runs with no human approval / in-the-loop gate detected",
+            "owasp": [
+              "LLM06",
+              "LLM09"
+            ],
+            "remediation": "Put a human-in-the-loop approval step in front of this action (approval gate, confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate sits on this path.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 14"
+              }
+            ]
+          }
+        ],
+        "secrets": [],
+        "trust_score": 90.0,
+        "trust_label": "verified",
+        "registry_match": "known",
+        "owasp_mappings": [
+          "LLM03",
+          "LLM06",
+          "LLM09"
+        ]
+      },
+      "bridges": [
+        {
+          "sku": "mcp-runtime",
+          "label": "Coming soon: MCP runtime validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this MCP server's tools be abused at runtime (tool abuse, agent-to-tool BOLA/BFLA, over-provisioned permissions)?"
     },
     {
       "surface": "MCP Server (in-house): src/orders_mcp_server.py",
@@ -101,9 +326,84 @@
       ],
       "risk_indicators": [
         "in-house MCP server (custom code, audit recommended)",
+        "unverified source",
         "financial action exposed"
       ],
-      "detector_name": "mcp_servers"
+      "detector_name": "mcp_audit",
+      "severity": "high",
+      "audit": {
+        "risk_flags": [
+          {
+            "flag": "unverified-source",
+            "severity": "medium",
+            "description": "MCP is not from a known/verified publisher; its behaviour and security posture are unknown.",
+            "owasp": [
+              "LLM03"
+            ],
+            "remediation": "Review the source before use; prefer official/verified MCPs; run unverified MCPs in isolation.",
+            "standards": [
+              {
+                "framework": "ISO 42001",
+                "framework_id": "iso-42001",
+                "clause": "A.10"
+              }
+            ]
+          },
+          {
+            "flag": "financial-action",
+            "severity": "high",
+            "description": "MCP exposes financial tools (refund, charge, payout) to the model.",
+            "owasp": [
+              "LLM06"
+            ],
+            "remediation": "Gate financial tools behind human approval.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 9"
+              }
+            ]
+          },
+          {
+            "flag": "no-human-oversight",
+            "severity": "high",
+            "description": "High-risk action (financial-action) runs with no human approval / in-the-loop gate detected",
+            "owasp": [
+              "LLM06",
+              "LLM09"
+            ],
+            "remediation": "Put a human-in-the-loop approval step in front of this action (approval gate, confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate sits on this path.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 14"
+              }
+            ]
+          }
+        ],
+        "secrets": [],
+        "trust_score": null,
+        "trust_label": "unknown",
+        "registry_match": "unknown",
+        "owasp_mappings": [
+          "LLM03",
+          "LLM06",
+          "LLM09"
+        ]
+      },
+      "bridges": [
+        {
+          "sku": "mcp-runtime",
+          "label": "Coming soon: MCP runtime validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this MCP server's tools be abused at runtime (tool abuse, agent-to-tool BOLA/BFLA, over-provisioned permissions)?"
     },
     {
       "surface": "Anthropic SDK",
@@ -125,7 +425,13 @@
       "risk_indicators": [
         "non-literal data flows into LLM call"
       ],
-      "detector_name": "llm_sdks"
+      "detector_name": "llm_sdks",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "OpenAI SDK",
@@ -147,7 +453,13 @@
       "risk_indicators": [
         "non-literal data flows into LLM call"
       ],
-      "detector_name": "llm_sdks"
+      "detector_name": "llm_sdks",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "AWS Bedrock",
@@ -167,7 +479,13 @@
       },
       "permissions": [],
       "risk_indicators": [],
-      "detector_name": "llm_sdks"
+      "detector_name": "llm_sdks",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "AWS Strands Agent: triage_agent (in src/support_workflow.py)",
@@ -183,7 +501,8 @@
         "metadata": {
           "framework": "strands",
           "agent_name": "triage_agent",
-          "tool_count": 3
+          "tool_count": 3,
+          "language": "python"
         }
       },
       "permissions": [
@@ -192,7 +511,20 @@
         "escalate_to_human"
       ],
       "risk_indicators": [],
-      "detector_name": "agent_frameworks"
+      "detector_name": "agent_frameworks",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "agent-validation",
+          "label": "Coming soon: agent validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=agent-framework&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this agent be driven to an unauthorized action (agent-to-tool authorization abuse, agent-exposed API)?"
     },
     {
       "surface": "LangChain Agent: support_agent (in src/chat_agent.py)",
@@ -208,7 +540,8 @@
         "metadata": {
           "framework": "langchain",
           "agent_name": "support_agent",
-          "tool_count": 3
+          "tool_count": 3,
+          "language": "python"
         }
       },
       "permissions": [
@@ -220,7 +553,111 @@
         "financial action exposed",
         "high blast-radius combination"
       ],
-      "detector_name": "agent_frameworks"
+      "detector_name": "agent_frameworks",
+      "severity": "high",
+      "audit": {
+        "risk_flags": [
+          {
+            "flag": "financial-action",
+            "severity": "high",
+            "description": "Agent can invoke financial tools (refund_payment)",
+            "owasp": [
+              "LLM06"
+            ],
+            "remediation": "Gate financial tools behind human approval; least-privilege the agent.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 9"
+              }
+            ]
+          },
+          {
+            "flag": "high-blast-radius",
+            "severity": "high",
+            "description": "Agent combines broad read access with financial/destructive actions",
+            "owasp": [
+              "LLM06"
+            ],
+            "remediation": "Split read and write agents; apply least-privilege per agent.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 9"
+              }
+            ]
+          },
+          {
+            "flag": "no-human-oversight",
+            "severity": "high",
+            "description": "High-risk action (financial-action, high-blast-radius) runs with no human approval / in-the-loop gate detected",
+            "owasp": [
+              "LLM06",
+              "LLM09"
+            ],
+            "remediation": "Put a human-in-the-loop approval step in front of this action (approval gate, confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate sits on this path.",
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 14"
+              }
+            ]
+          }
+        ],
+        "secrets": [],
+        "trust_score": null,
+        "trust_label": "",
+        "registry_match": "",
+        "owasp_mappings": [
+          "LLM06",
+          "LLM09"
+        ]
+      },
+      "bridges": [
+        {
+          "sku": "agent-validation",
+          "label": "Coming soon: agent validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=agent-framework&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this agent be driven to an unauthorized action (agent-to-tool authorization abuse, agent-exposed API)?"
+    },
+    {
+      "surface": "LangChain (used in 1 file)",
+      "category": "agent-framework",
+      "evidence": {
+        "files": [
+          "src/knowledge_base.py"
+        ],
+        "snippet": "",
+        "line_numbers": [],
+        "metadata": {
+          "framework": "langchain",
+          "file_count": 1
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [],
+      "detector_name": "agent_frameworks",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "agent-validation",
+          "label": "Coming soon: agent validation in APIsec",
+          "url": "https://www.apisec.ai/products?category=agent-framework&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "coming"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "coming",
+      "runtime_question": "Can this agent be driven to an unauthorized action (agent-to-tool authorization abuse, agent-exposed API)?"
     },
     {
       "surface": "AI Provider API Keys",
@@ -251,7 +688,13 @@
         "multiple AI provider keys present",
         "observability/tracing key present (production telemetry to third party)"
       ],
-      "detector_name": "env_keys"
+      "detector_name": "env_keys",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "Model Gateway: LiteLLM",
@@ -279,7 +722,13 @@
       "risk_indicators": [
         "multi-model routing layer (production traffic flows through this)"
       ],
-      "detector_name": "model_gateways"
+      "detector_name": "model_gateways",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "K8s AI Workload: vllm (in deploy/vllm-embeddings.yaml)",
@@ -303,7 +752,13 @@
       "risk_indicators": [
         "self-hosted LLM runtime (operational responsibility on the team)"
       ],
-      "detector_name": "ai_infra"
+      "detector_name": "ai_infra",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     },
     {
       "surface": "Bedrock provisioned throughput: anthropic.claude-sonnet-4-20250514-v1:0",
@@ -324,7 +779,229 @@
       "risk_indicators": [
         "high-cost AI infrastructure (billing exposure)"
       ],
-      "detector_name": "ai_infra"
+      "detector_name": "ai_infra",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
+    },
+    {
+      "surface": "REST API: GET /health",
+      "category": "api",
+      "evidence": {
+        "files": [
+          "src/api.py"
+        ],
+        "snippet": "@app.get(\"/health\")",
+        "line_numbers": [
+          14
+        ],
+        "metadata": {
+          "method": "GET",
+          "path": "/health",
+          "source_spec": "",
+          "auth": "unknown",
+          "framework": "fastapi"
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [],
+      "detector_name": "api_endpoints",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "api-runtime",
+          "label": "Onboard this API for outside-in runtime testing in APIsec",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "live"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "live",
+      "runtime_question": "Is this endpoint actually exploitable (BOLA, broken auth, business-logic abuse) against the running application?"
+    },
+    {
+      "surface": "REST API: GET /orders/{order_id}",
+      "category": "api",
+      "evidence": {
+        "files": [
+          "src/api.py"
+        ],
+        "snippet": "@app.get(\"/orders/{order_id}\")",
+        "line_numbers": [
+          19
+        ],
+        "metadata": {
+          "method": "GET",
+          "path": "/orders/{order_id}",
+          "source_spec": "",
+          "auth": "unknown",
+          "framework": "fastapi"
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [
+        "object-id in path (BOLA candidate)"
+      ],
+      "detector_name": "api_endpoints",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "api-runtime",
+          "label": "Onboard this API for outside-in runtime testing in APIsec",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "live"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "live",
+      "runtime_question": "Is this endpoint actually exploitable (BOLA, broken auth, business-logic abuse) against the running application?"
+    },
+    {
+      "surface": "REST API: GET /customers/{customer_id}",
+      "category": "api",
+      "evidence": {
+        "files": [
+          "src/api.py"
+        ],
+        "snippet": "@app.get(\"/customers/{customer_id}\")",
+        "line_numbers": [
+          24
+        ],
+        "metadata": {
+          "method": "GET",
+          "path": "/customers/{customer_id}",
+          "source_spec": "",
+          "auth": "unknown",
+          "framework": "fastapi"
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [
+        "object-id in path (BOLA candidate)"
+      ],
+      "detector_name": "api_endpoints",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "api-runtime",
+          "label": "Onboard this API for outside-in runtime testing in APIsec",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "live"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "live",
+      "runtime_question": "Is this endpoint actually exploitable (BOLA, broken auth, business-logic abuse) against the running application?"
+    },
+    {
+      "surface": "REST API: PATCH /customers/{customer_id}",
+      "category": "api",
+      "evidence": {
+        "files": [
+          "src/api.py"
+        ],
+        "snippet": "@app.patch(\"/customers/{customer_id}\")",
+        "line_numbers": [
+          29
+        ],
+        "metadata": {
+          "method": "PATCH",
+          "path": "/customers/{customer_id}",
+          "source_spec": "",
+          "auth": "unknown",
+          "framework": "fastapi"
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [
+        "object-id in path (BOLA candidate)"
+      ],
+      "detector_name": "api_endpoints",
+      "severity": null,
+      "audit": null,
+      "bridges": [
+        {
+          "sku": "api-runtime",
+          "label": "Onboard this API for outside-in runtime testing in APIsec",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "status": "live"
+        }
+      ],
+      "disposition": "validate-runtime",
+      "runtime_status": "live",
+      "runtime_question": "Is this endpoint actually exploitable (BOLA, broken auth, business-logic abuse) against the running application?"
+    },
+    {
+      "surface": "Vector store: pgvector",
+      "category": "vector-store",
+      "evidence": {
+        "files": [
+          "src/knowledge_base.py"
+        ],
+        "snippet": "from langchain_postgres.vectorstores import PGVector",
+        "line_numbers": [],
+        "metadata": {
+          "store_type": "self-hosted",
+          "languages": [
+            "python"
+          ],
+          "owasp": [
+            "LLM08"
+          ]
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [
+        "retrieved content reaches the model (retrieval-augmented generation)",
+        "application data embedded for retrieval",
+        "ingests external content (RAG poisoning surface)"
+      ],
+      "detector_name": "vector_rag",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
+    },
+    {
+      "surface": "RAG pipeline: LangChain",
+      "category": "vector-store",
+      "evidence": {
+        "files": [
+          "src/knowledge_base.py"
+        ],
+        "snippet": "from langchain_postgres.vectorstores import PGVector",
+        "line_numbers": [],
+        "metadata": {
+          "store_type": "framework",
+          "languages": [
+            "python"
+          ],
+          "owasp": [
+            "LLM08"
+          ]
+        }
+      },
+      "permissions": [],
+      "risk_indicators": [
+        "retrieved content reaches the model (retrieval-augmented generation)",
+        "application data embedded for retrieval",
+        "ingests external content (RAG poisoning surface)"
+      ],
+      "detector_name": "vector_rag",
+      "severity": null,
+      "audit": null,
+      "bridges": [],
+      "disposition": "resolve-here",
+      "runtime_status": "n/a",
+      "runtime_question": null
     }
   ],
   "errors": []

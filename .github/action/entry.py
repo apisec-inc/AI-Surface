@@ -376,7 +376,7 @@ def _format_inventory_comment(report: Dict[str, Any], markdown_body: str) -> str
             "and AI provider env keys are all clean._\n\n"
             "<sub>Powered by "
             "[ai-surface](https://github.com/apisec-inc/AI-Surface) · "
-            "[Validate exploitability](https://apisec.ai/ai-validation)</sub>"
+            "[Validate exploitability](https://www.apisec.ai/products)</sub>"
         )
 
     summary = (
@@ -398,7 +398,7 @@ def _format_inventory_comment(report: Dict[str, Any], markdown_body: str) -> str
         "<sub>"
         "Powered by [ai-surface](https://github.com/apisec-inc/AI-Surface). "
         "To validate which of these surfaces are exploitable in a running application: "
-        "[apisec.ai/ai-validation](https://apisec.ai/ai-validation)."
+        "[apisec.ai/products](https://www.apisec.ai/products)."
         "</sub>"
     )
     return summary + body + footer

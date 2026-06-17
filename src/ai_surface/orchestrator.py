@@ -133,11 +133,14 @@ class Orchestrator:
         # JSON / markdown / terminal output.
         safe_root = root.name or "."
 
+        from .repo import detect_repository  # noqa: PLC0415
+
         report = Report(
             findings=all_findings,
             scan_root=safe_root,
             scan_timestamp=Report.now(),
             detectors_run=detector_names,
+            repository=detect_repository(scan_root),
             errors=errors,
         )
         report.summary = report.build_summary()

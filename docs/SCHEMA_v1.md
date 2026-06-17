@@ -19,11 +19,12 @@ Source of truth for the types: `src/ai_surface/types.py`.
 1. **Discovery stays severity-free.** Inventory-only findings (llm-sdk, agent,
    gateway, infra, env-key, plain api) have `severity: null` and `audit: null`.
    Absence of severity means "inventoried, not assessed", on purpose.
-2. **Severity comes only from a deep-dive audit layer.** Today that is MCP
-   (`mcp_audit` detector). When present, `finding.severity` = the max severity
+2. **Severity comes only from a deep-dive audit layer.** Today those are the MCP,
+   agent, and RAG audits. When present, `finding.severity` = the max severity
    across `finding.audit.risk_flags`.
-3. **Secrets carry names/types only, never values.** Privacy guarantee. The
-   tool is 100% offline; no value ever leaves the machine or enters the report.
+3. **Secrets carry names/types only, never values.** A captured secret value is
+   never read into the report. The local CLI makes no network calls, so no value
+   leaves the machine.
 4. **Optional fields are always emitted** (null / [] when N/A) so consumers need
    no guards.
 5. **Static only.** No runtime execution. Runtime validation is the paid
@@ -34,7 +35,7 @@ Source of truth for the types: `src/ai_surface/types.py`.
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool_version": "0.5.3",
+  "tool_version": "1.0.1",
   "scan_root": "/abs/path",
   "scan_timestamp": "2026-06-11T00:00:00+00:00",   // ISO 8601 UTC
   "detectors_run": ["llm_sdks", "mcp_audit", "api_endpoints", ...],

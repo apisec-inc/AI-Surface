@@ -298,9 +298,12 @@ def _render_diff(diff, output: str, quiet: bool) -> None:
     if output == "json":
         console.print_json(json.dumps(diff_to_dict(diff)))
     else:
-        # markdown is the default for diff output; terminal mode shows the
-        # same markdown source (still readable, just unstyled).
-        console.print(render_diff_markdown(diff))
+        # markdown is the default for diff output. Emit it as raw text via
+        # plain print(): this output is captured verbatim by the GitHub Action
+        # for the PR comment and redirected to files. Routing it through the
+        # rich console would hard-wrap long URLs (breaking links) and consume
+        # single-token link labels like [ai-surface] as rich markup.
+        print(render_diff_markdown(diff))
 
 
 def _print_quiet_diff_summary(diff) -> None:
@@ -584,7 +587,11 @@ def scan(
     elif output == "markdown":
         from .reporters.markdown_reporter import render_markdown  # noqa: PLC0415
 
-        console.print(render_markdown(report))
+        # Print raw, not via the rich console: markdown is captured verbatim by
+        # the GitHub Action (PR comment) and redirected to files. The rich
+        # console would hard-wrap long URLs and eat single-token [labels] as
+        # markup, corrupting the document.
+        print(render_markdown(report))
     elif output in ("cyclonedx", "ai-bom"):
         from .reporters.cyclonedx_reporter import render_cyclonedx  # noqa: PLC0415
 
@@ -679,8 +686,11 @@ def compare(
     if output == "json":
         console.print_json(json.dumps(diff_to_dict(diff)))
     else:
-        # markdown is default
-        console.print(render_diff_markdown(diff))
+        # markdown is default. Emit raw via plain print(): the GitHub Action
+        # captures this stdout verbatim for the PR comment. The rich console
+        # would hard-wrap long URLs (breaking the links) and eat single-token
+        # [labels] as markup. See _render_diff for the same fix.
+        print(render_diff_markdown(diff))
 
 
 @app.command()

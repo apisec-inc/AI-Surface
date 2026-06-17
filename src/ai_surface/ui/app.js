@@ -1410,12 +1410,20 @@ python3 -m http.server 8000
       ? `<ul class="rem-list">${rem.join("")}</ul>`
       : `<div class="secret-note">${icon("info")}<span>No code-level remediation items.${f.disposition === "validate-runtime" ? " Exploitability is proven at runtime, see below." : ""}</span></div>`;
 
-    /* ---- 4 - VALIDATE AT RUNTIME: the CTA ---- */
-    const bridges = (f.bridges || []).map((b) => `
-      <a class="dr-bridge" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">
-        <span class="sku">${esc(b.sku)}</span>
+    /* ---- 4 - VALIDATE AT RUNTIME: the CTA ----
+       Only surfaces the platform validates today (status "live", i.e. API) get
+       a working CTA. The rest are shown disabled: the platform does not run
+       runtime tests for them yet, so there is no live destination to link to.
+       Their label already reads "Coming soon ...". */
+    const bridges = (f.bridges || []).map((b) =>
+      b.status === "live"
+        ? `<a class="dr-bridge" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer">
         <span class="lbl">${esc(b.label)} ${icon("arrow", "")}</span>
-      </a>`).join("");
+      </a>`
+        : `<div class="dr-bridge disabled" aria-disabled="true">
+        <span class="lbl">${esc(b.label)}</span>
+      </div>`
+    ).join("");
     let validate;
     let stPill = "";
     if (f.disposition === "validate-runtime") {

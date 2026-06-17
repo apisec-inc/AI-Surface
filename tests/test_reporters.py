@@ -139,7 +139,7 @@ def _schema1_report() -> Report:
             Bridge(
                 sku="mcp-runtime",
                 label="Run MCP runtime validation in APIsec",
-                url="https://apisec.ai/ai-validation?category=mcp-server&risk=secrets-in-env",
+                url="https://www.apisec.ai/products?category=mcp-server&risk=secrets-in-env",
             ),
         ],
     )
@@ -167,7 +167,7 @@ def _schema1_report() -> Report:
             Bridge(
                 sku="api-runtime",
                 label="Onboard this API for outside-in runtime testing in APIsec",
-                url="https://apisec.ai/api-validation?path=%2Fv1%2Forders%2F%7Bid%7D%2Frefund",
+                url="https://www.apisec.ai/products?path=%2Fv1%2Forders%2F%7Bid%7D%2Frefund",
             ),
         ],
     )
@@ -244,7 +244,7 @@ def test_markdown_reporter_handles_empty_report() -> None:
 
 def test_markdown_reporter_includes_cross_sell() -> None:
     md = render_markdown(_sample_report())
-    assert "apisec.ai/ai-validation" in md
+    assert "apisec.ai/products" in md
 
 
 # ---- Terminal reporter ----
@@ -255,7 +255,7 @@ def test_terminal_reporter_runs_without_error(capsys: pytest.CaptureFixture[str]
     console = Console(record=True, force_terminal=True, width=120)
     render_terminal(_sample_report(), console)
     text = console.export_text()
-    assert "AI Surface Report" in text
+    assert "AI Attack Surface Report" in text
     assert "Anthropic SDK" in text
     assert "refund_agent" in text
 

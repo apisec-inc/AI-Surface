@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "tool_version": "1.0.0",
   "scan_root": "/example/acme-payments",
+  "repository": "",
   "scan_timestamp": "2026-06-11T00:00:00+00:00",
   "detectors_run": [
     "llm_sdks",
@@ -227,7 +228,7 @@
         {
           "sku": "agent-validation",
           "label": "Coming soon: agent validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=agent-framework&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=agent-framework&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -380,7 +381,7 @@
         {
           "sku": "mcp-runtime",
           "label": "Coming soon: MCP runtime validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=mcp-server&risk=secrets-in-env&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=secrets-in-env&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -421,7 +422,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Forders%2F%7Bid%7D%2Frefund&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],

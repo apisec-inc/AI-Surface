@@ -13,6 +13,7 @@ from rich.rule import Rule
 from rich.text import Text
 
 from ..cross_promo import build_upgrade_url, headline_finding, specialists_for_report
+from ..frameworks import standards_for_flag
 from ..types import (
     CATEGORY_AGENT_FRAMEWORK,
     CATEGORY_AI_INFRA,
@@ -108,13 +109,17 @@ def render_terminal(
 
 
 def _render_header(report: Report, console: Console) -> None:
-    title = Text("AI Surface Report", style="bold cyan")
+    title = Text("AI Attack Surface Report", style="bold cyan")
     console.print()
     console.print(title)
     console.print(Rule(style="cyan"))
     console.print(
-        Text("Scanned: ", style="dim") + Text(report.scan_root, style="white"),
+        Text("Project:    ", style="dim") + Text(report.scan_root, style="white"),
     )
+    if report.repository:
+        console.print(
+            Text("Repository: ", style="dim") + Text(report.repository, style="white"),
+        )
 
 
 def _render_summary_line(report: Report, console: Console) -> None:
@@ -288,6 +293,12 @@ def _render_audit(finding: Finding, console: Console) -> None:
             console.print(
                 Padding(Text("OWASP: " + ", ".join(rf.owasp), style="dim"), (0, 0, 0, 8))
             )
+        standards = standards_for_flag(rf.flag)
+        if standards:
+            gov = ", ".join(f"{s['framework']} {s['clause']}" for s in standards)
+            console.print(
+                Padding(Text("Governance: " + gov, style="dim"), (0, 0, 0, 8))
+            )
         if rf.remediation:
             console.print(Padding(Text(f"Fix: {rf.remediation}", style="green"), (0, 0, 0, 8)))
 
@@ -373,7 +384,7 @@ def _render_footer(report: Report, console: Console, verbose: bool = False) -> N
     upgrade_url = build_upgrade_url(headline, source="ai-surface", medium="cli")
     console.print(
         f"Validate which surfaces are exploitable: "
-        f"[link={upgrade_url}]apisec.ai/ai-validation[/link]"
+        f"[link={upgrade_url}]apisec.ai/products[/link]"
     )
 
     # Runtime validation routes available from this scan (report.summary).

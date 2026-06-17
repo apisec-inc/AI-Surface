@@ -30,15 +30,15 @@
       },
       {
         "name": "ai-surface:framework-evidence:eu-ai-act",
-        "value": "EU AI Act: Technical documentation and record-keeping (Art. 11-12); Risk management of AI systems (Art. 9); Human oversight of high-risk actions (Art. 14); Logging and monitoring of AI operation (Art. 12)"
+        "value": "EU AI Act: Technical documentation and record-keeping (Art. 11-12); Risk management of AI systems (Art. 9); Human oversight of high-risk actions (Art. 14); Logging and monitoring of AI operation (Art. 12); Data governance for AI systems (Art. 10)"
       },
       {
         "name": "ai-surface:framework-evidence:nist-ai-rmf",
-        "value": "NIST AI RMF: Map: inventory and context of AI systems; Measure: identify and assess AI risks; Measure: AI system monitored in operation (MEASURE 3)"
+        "value": "NIST AI RMF: Map: inventory and context of AI systems; Measure: identify and assess AI risks; Measure: AI system monitored in operation (MEASURE 3); Measure: data privacy and provenance"
       },
       {
         "name": "ai-surface:framework-evidence:iso-42001",
-        "value": "ISO/IEC 42001: AI system inventory (Annex A); AI risk assessment; Operation and monitoring (Annex A.6.2.6)"
+        "value": "ISO/IEC 42001: AI system inventory (Annex A); AI risk assessment; Operation and monitoring (Annex A.6.2.6); Data for AI systems (Annex A.7)"
       },
       {
         "name": "ai-surface:framework-evidence:owasp-llm",

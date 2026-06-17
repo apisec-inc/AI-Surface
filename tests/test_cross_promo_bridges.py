@@ -44,7 +44,7 @@ def test_mcp_finding_gets_mcp_runtime_bridge_with_top_risk() -> None:
     assert "utm_campaign=oss-funnel" in b.url
 
 
-def test_api_finding_gets_api_runtime_bridge_with_path() -> None:
+def test_api_finding_gets_live_api_runtime_bridge() -> None:
     f = Finding(
         surface="REST API: POST /v1/orders/{id}/refund",
         category=CATEGORY_API,
@@ -53,8 +53,12 @@ def test_api_finding_gets_api_runtime_bridge_with_path() -> None:
     bridges = build_bridges(f)
     assert len(bridges) == 1
     assert bridges[0].sku == SKU_API_RUNTIME
-    assert "api-validation" in bridges[0].url
-    assert "path=%2Fv1%2Forders" in bridges[0].url  # url-encoded path
+    # API is the one surface the platform validates today: the bridge is live
+    # and lands on the public products page (no path context param).
+    assert bridges[0].status == "live"
+    assert bridges[0].url.startswith("https://www.apisec.ai/products")
+    assert "path=" not in bridges[0].url
+    assert "utm_source=ai-surface" in bridges[0].url
 
 
 def test_env_key_finding_gets_no_bridge() -> None:

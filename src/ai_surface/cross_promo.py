@@ -57,9 +57,11 @@ class SpecialistTool(TypedDict):
 # Vertical: APIsec validation (the conversion link)
 # ---------------------------------------------------------------------------
 
-#: Base URL for the APIsec validation upgrade landing page. The page exists
-#: today and reads ?category= and ?risk= params; UTM params are standard.
-APISEC_BASE_URL = "https://apisec.ai/ai-validation"
+#: Base URL for the APIsec upgrade landing page. Runtime validation for non-API
+#: surfaces (MCP, agents) is not live yet, so these bridges render disabled in
+#: the UI; the URL points at the live products page so no other output links to
+#: a dead page. UTM params are standard.
+APISEC_BASE_URL = "https://www.apisec.ai/products"
 
 #: Default UTM campaign value for OSS-funnel attribution. APIsec marketing
 #: dashboards filter on this to measure conversion.
@@ -272,8 +274,10 @@ def specialists_for_report(findings: list[Finding]) -> list[SpecialistTool]:
 # bridge, chosen by category.
 
 #: Landing page for the API outside-in runtime testing SKU (the NG platform's
-#: existing API security capability). Reads ?path= for context.
-API_BASE_URL = "https://apisec.ai/api-validation"
+#: existing API security capability). This is the one surface the platform
+#: validates today, so its bridge is the only live CTA in the UI. Points at the
+#: public products page.
+API_BASE_URL = "https://www.apisec.ai/products"
 
 #: Category -> paid SKU routing. ONLY the runtime-validatable attack surface
 #: gets a bridge (the validate-runtime disposition). LLM/gateway/infra/env-key
@@ -324,10 +328,11 @@ def build_bridges(
 ) -> list[Bridge]:
     """Return the paid-platform bridge(s) for a finding, per schema 1.0.
 
-    At most one bridge today, routed by category. API findings go to the API
-    runtime SKU with the route path embedded; everything else routes to the
-    ai-validation landing page with category + risk context. Returns [] for
-    categories with no bridge (e.g. env-key).
+    At most one bridge today, routed by category. API findings get the live
+    API runtime SKU (the one surface the platform validates today) landing on
+    the products page; everything else routes to the products page with
+    category + risk context but is marked status "coming" (rendered disabled in
+    the UI). Returns [] for categories with no bridge (e.g. env-key).
     """
     sku = CATEGORY_TO_SKU.get(finding.category)
     if sku is None:
@@ -340,12 +345,10 @@ def build_bridges(
     ]
 
     if sku == SKU_API_RUNTIME:
-        params: list[tuple[str, str]] = []
-        path = finding.evidence.metadata.get("path") if finding.evidence else None
-        if isinstance(path, str) and path:
-            params.append(("path", path))
-        params.extend(base_utm)
-        url = f"{API_BASE_URL}?{urlencode(params)}"
+        # API is the one surface the platform validates today. Land on the
+        # public products page with UTM attribution only; the marketing page
+        # does not consume a context param.
+        url = f"{API_BASE_URL}?{urlencode(base_utm)}"
     else:
         params = [("category", finding.category)]
         risk = _risk_param(finding)

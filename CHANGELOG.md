@@ -4,6 +4,25 @@ All notable changes to `ai-surface` will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-06-17
+
+A maintenance release focused on the GitHub Action output, link correctness, and the `--ui` runtime-validation panel.
+
+### Fixed
+
+- **GitHub Action PR comments were corrupted.** The `compare` and `scan --output markdown` output was routed through the rich console, which hard-wrapped long URLs (breaking the links) and consumed single-token link labels such as `[ai-surface]` as markup. Markdown is now emitted as raw text, so the captured PR comment renders correctly. Added regression tests at the CLI boundary.
+- Replaced every dead `apisec.ai/ai-validation` / `apisec.ai/api-validation` link (CLI footers, the PR comment, the README, the docs, and the committed sample outputs) with the live `apisec.ai/products` page.
+- **The GitHub Action Docker image could not build.** `pyproject.toml` declares `readme = "README.md"`, but the Dockerfile did not copy `README.md` into the build context, so the in-image `pip install` failed metadata generation. `README.md` is now copied in.
+
+### Changed
+
+- **`--ui` runtime-validation panel.** Only the API surface, which the platform validates today, shows an active CTA; MCP and agent surfaces now render as disabled "coming soon" instead of links to a journey that does not exist yet. The panel is more compact.
+
+### Added
+
+- **`repository` field** on the report (owner/repo, derived from the local `.git/config` with any embedded credentials stripped) and a **`Governance:` line** (the EU AI Act / NIST / ISO clauses a flag evidences) in the terminal, markdown, and JSON reporters, so the governance mapping is visible outside the `--ui`.
+- Vector-store / RAG and API (BOLA-candidate) examples in the bundled `examples/demo-app`, so the demo exercises all eight detector categories.
+
 ## [1.0.0] - 2026-06-15
 
 The 1.0 release. The MCP deep-dive audit is merged in, two new detector categories ship, every audited finding now maps to AI-governance frameworks, and the whole tool has been validated against 19 popular public AI repositories.

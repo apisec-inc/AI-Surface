@@ -35,6 +35,7 @@ def report_to_dict(report: Report) -> dict[str, Any]:
         "schema_version": report.schema_version,
         "tool_version": report.tool_version,
         "scan_root": report.scan_root,
+        "repository": report.repository,
         "scan_timestamp": report.scan_timestamp,
         "detectors_run": list(report.detectors_run),
         "findings_count": len(report.findings),

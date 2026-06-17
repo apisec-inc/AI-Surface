@@ -281,6 +281,10 @@ class Report:
     detectors_run: list[str]
     schema_version: str = "1.0"
     tool_version: str = _TOOL_VERSION
+    repository: str = ""
+    """OPTIONAL provenance: the scanned repo's origin remote (e.g.
+    ``apisec-inc/AI-Surface``), detected from .git/config. Empty when the scan
+    root is not a git repo. Credentials in the remote URL are stripped."""
     errors: list[str] = field(default_factory=list)
     """Non-fatal errors from individual detectors. Surface to user but do not abort."""
 

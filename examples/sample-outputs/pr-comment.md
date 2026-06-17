@@ -19,19 +19,19 @@ The Action automatically updates this comment in place on subsequent pushes.
   - Tools/permissions: `read_charges`, `refund`, `customer:read`
   - Files: `.mcp.json`
   - ⚠️ financial action exposed
-  - [Validate this surface →](https://apisec.ai/ai-validation?category=mcp-server&risk=financial-action&utm_source=ai-surface&utm_medium=pr-comment&utm_campaign=oss-funnel)
+  - [Validate this surface →](https://www.apisec.ai/products?category=mcp-server&risk=financial-action&utm_source=ai-surface&utm_medium=pr-comment&utm_campaign=oss-funnel)
 
 #### Modified AI surfaces
 
 - **LangChain Agent: support_agent (in src/chat_agent.py)**
   - Permissions added: `cancel_subscription`
   - ⚠️ Risk added: `high blast-radius combination`
-  - [Validate this surface →](https://apisec.ai/ai-validation?category=agent-framework&risk=high-blast-radius&utm_source=ai-surface&utm_medium=pr-comment&utm_campaign=oss-funnel)
+  - [Validate this surface →](https://www.apisec.ai/products?category=agent-framework&risk=high-blast-radius&utm_source=ai-surface&utm_medium=pr-comment&utm_campaign=oss-funnel)
 
 ---
 
 <sub>
 🔍 Powered by <a href="https://github.com/apisec-inc/AI-Surface">ai-surface</a>.
 Deep MCP analysis: <a href="https://github.com/apisec-inc/mcp-audit">mcp-audit</a>.
-Validate exploitability: <a href="https://apisec.ai/ai-validation">APIsec platform</a>.
+Validate exploitability: <a href="https://www.apisec.ai/products">APIsec platform</a>.
 </sub>

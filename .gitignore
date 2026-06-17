@@ -62,3 +62,6 @@ docs/GTM/
 # Internal-only ops / marketing scripts (lead-gen, metrics polling, etc.).
 # These are maintainer tools, not part of the OSS product surface.
 ops/
+
+# Generated inventory artifact (ai-surface --write-inventory)
+.ai-inventory.md

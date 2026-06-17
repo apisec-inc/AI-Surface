@@ -2,6 +2,7 @@
   "schema_version": "1.0",
   "tool_version": "1.0.0",
   "scan_root": "acme-payments",
+  "repository": "",
   "scan_timestamp": "2026-06-11T00:00:00+00:00",
   "detectors_run": [
     "mcp_audit",
@@ -58,7 +59,8 @@
         "Technical documentation and record-keeping (Art. 11-12)",
         "Risk management of AI systems (Art. 9)",
         "Human oversight of high-risk actions (Art. 14)",
-        "Logging and monitoring of AI operation (Art. 12)"
+        "Logging and monitoring of AI operation (Art. 12)",
+        "Data governance for AI systems (Art. 10)"
       ]
     },
     {
@@ -67,7 +69,8 @@
       "provides": [
         "Map: inventory and context of AI systems",
         "Measure: identify and assess AI risks",
-        "Measure: AI system monitored in operation (MEASURE 3)"
+        "Measure: AI system monitored in operation (MEASURE 3)",
+        "Measure: data privacy and provenance"
       ]
     },
     {
@@ -76,7 +79,8 @@
       "provides": [
         "AI system inventory (Annex A)",
         "AI risk assessment",
-        "Operation and monitoring (Annex A.6.2.6)"
+        "Operation and monitoring (Annex A.6.2.6)",
+        "Data for AI systems (Annex A.7)"
       ]
     },
     {
@@ -299,7 +303,7 @@
         {
           "sku": "agent-validation",
           "label": "Coming soon: agent validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=agent-framework&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=agent-framework&risk=financial-action&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -369,7 +373,7 @@
         {
           "sku": "agent-validation",
           "label": "Coming soon: agent validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=agent-framework&risk=no-observability&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=agent-framework&risk=no-observability&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -415,7 +419,18 @@
               "LLM02"
             ],
             "remediation": "Redact or minimize PII before prompting; review the data flow.",
-            "standards": []
+            "standards": [
+              {
+                "framework": "EU AI Act",
+                "framework_id": "eu-ai-act",
+                "clause": "Art. 10"
+              },
+              {
+                "framework": "ISO 42001",
+                "framework_id": "iso-42001",
+                "clause": "A.7"
+              }
+            ]
           },
           {
             "flag": "no-observability",
@@ -454,7 +469,7 @@
         {
           "sku": "agent-validation",
           "label": "Coming soon: agent validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=agent-framework&risk=pii-to-llm&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=agent-framework&risk=pii-to-llm&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -622,7 +637,7 @@
         {
           "sku": "mcp-runtime",
           "label": "Coming soon: MCP runtime validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=mcp-server&risk=secrets-detected&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=secrets-detected&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -718,7 +733,7 @@
         {
           "sku": "mcp-runtime",
           "label": "Coming soon: MCP runtime validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=mcp-server&risk=broad-permissions&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=broad-permissions&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -844,7 +859,7 @@
         {
           "sku": "mcp-runtime",
           "label": "Coming soon: MCP runtime validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=mcp-server&risk=no-human-oversight&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=no-human-oversight&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -930,7 +945,7 @@
         {
           "sku": "mcp-runtime",
           "label": "Coming soon: MCP runtime validation in APIsec",
-          "url": "https://apisec.ai/ai-validation?category=mcp-server&risk=remote-mcp&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?category=mcp-server&risk=remote-mcp&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "coming"
         }
       ],
@@ -1132,7 +1147,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Forders%2F%7Bid%7D%2Frefund&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1170,7 +1185,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Forders%2F%7Bid%7D&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1206,7 +1221,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Fpayments&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1244,7 +1259,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Fcustomers%2F%7Bid%7D&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1282,7 +1297,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Fcustomers%2F%7Bid%7D&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1318,7 +1333,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Fauth%2Ftoken&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1356,7 +1371,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Faccounts%2F%7Baccount_id%7D%2Fbalance&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1392,7 +1407,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Ftransfers&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1430,7 +1445,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Fcards%2F%7Bcard_id%7D&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1466,7 +1481,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Ftransactions&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1502,7 +1517,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Finternal%2Fledger%2Fpost&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],
@@ -1540,7 +1555,7 @@
         {
           "sku": "api-runtime",
           "label": "Onboard this API for outside-in runtime testing in APIsec",
-          "url": "https://apisec.ai/api-validation?path=%2Fv1%2Finvoices%2F%7Bid%7D&utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
+          "url": "https://www.apisec.ai/products?utm_source=ai-surface&utm_medium=ui&utm_campaign=oss-funnel",
           "status": "live"
         }
       ],

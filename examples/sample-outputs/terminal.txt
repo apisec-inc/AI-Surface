@@ -1,103 +1,230 @@
 
-AI Surface Report
-────────────────────────────────────────────────────────────────────────────────
-Scanned: demo-app
-12 production AI surfaces · 13 risk indicators · across 6 detector(s)
+AI Attack Surface Report
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Project:    demo-app
+19 production AI surfaces · 25 risk indicators · across 8 detector(s)
+Severity: 3 high · 1 medium
 
 LLM SDK CALL SITES
   • Anthropic SDK
-      Models: claude-3-5-sonnet-20241022                                        
-      → src/llm_service.py                                                      
-      ⚠ non-literal data flows into LLM call                                    
-      → validate this surface                                                   
+      Models: claude-3-5-sonnet-20241022                                                            
+      → src/llm_service.py                                                                          
+      ⚠ non-literal data flows into LLM call                                                        
+      → validate this surface                                                                       
   • OpenAI SDK
-      Models: gpt-4-turbo                                                       
-      → src/llm_service.py                                                      
-      ⚠ non-literal data flows into LLM call                                    
-      → validate this surface                                                   
+      Models: gpt-4-turbo                                                                           
+      → src/llm_service.py                                                                          
+      ⚠ non-literal data flows into LLM call                                                        
+      → validate this surface                                                                       
   • AWS Bedrock
-      Models: us.anthropic.claude-sonnet-4-20250514-v1:0                        
-      → src/support_workflow.py                                                 
+      Models: us.anthropic.claude-sonnet-4-20250514-v1:0                                            
+      → src/support_workflow.py                                                                     
 
 AGENT FRAMEWORKS
   • AWS Strands Agent: triage_agent (in src/support_workflow.py)
-      Tools/perms: fetch_customer_profile, search_knowledge_base,               
-    escalate_to_human                                                           
-      → src/support_workflow.py                                                 
-  • LangChain Agent: support_agent (in src/chat_agent.py)
-      Tools/perms: lookup_order, refund_payment, cancel_subscription            
-      → src/chat_agent.py                                                       
-      ⚠ financial action exposed                                                
-      ⚠ high blast-radius combination                                           
-      → validate this surface                                                   
+      Tools/perms: fetch_customer_profile, search_knowledge_base, escalate_to_human                 
+      → src/support_workflow.py                                                                     
+      → validate at runtime: Coming soon: agent validation in APIsec                                
+  • LangChain Agent: support_agent (in src/chat_agent.py) [HIGH] 
+      Tools/perms: lookup_order, refund_payment, cancel_subscription                                
+      → src/chat_agent.py                                                                           
+      ⚠ financial action exposed                                                                    
+      ⚠ high blast-radius combination                                                               
+      ⚑ [HIGH] financial-action                                                                     
+        Agent can invoke financial tools (refund_payment)                                           
+        OWASP: LLM06                                                                                
+        Governance: EU AI Act Art. 9                                                                
+        Fix: Gate financial tools behind human approval; least-privilege the agent.                 
+      ⚑ [HIGH] high-blast-radius                                                                    
+        Agent combines broad read access with financial/destructive actions                         
+        OWASP: LLM06                                                                                
+        Governance: EU AI Act Art. 9                                                                
+        Fix: Split read and write agents; apply least-privilege per agent.                          
+      ⚑ [HIGH] no-human-oversight                                                                   
+        High-risk action (financial-action, high-blast-radius) runs with no human approval /        
+        in-the-loop gate detected                                                                   
+        OWASP: LLM06, LLM09                                                                         
+        Governance: EU AI Act Art. 14                                                               
+        Fix: Put a human-in-the-loop approval step in front of this action (approval gate,          
+        confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate
+        sits on this path.                                                                          
+      → validate this surface                                                                       
+      → validate at runtime: Coming soon: agent validation in APIsec                                
+  • LangChain (used in 1 file)
+      → src/knowledge_base.py                                                                       
+      → validate at runtime: Coming soon: agent validation in APIsec                                
 
 MCP SERVERS
-  • MCP Server: github-mcp
-      Tools/perms: repo:read, issues:write, admin                               
-      → .mcp.json                                                               
-      ⚠ broad permissions                                                       
-      → validate this surface                                                   
-  • MCP Server: stripe-mcp
-      Tools/perms: read_charges, refund, customer:read                          
-      → .mcp.json                                                               
-      ⚠ financial action exposed                                                
-      → validate this surface                                                   
-  • MCP Server (in-house): src/orders_mcp_server.py
-      Tools/perms: lookup_order, refund_payment, cancel_order, delete_customer, 
-    update_record                                                               
-      → src/orders_mcp_server.py                                                
-      ⚠ in-house MCP server (custom code, audit recommended)                    
-      ⚠ financial action exposed                                                
-      → validate this surface                                                   
+  • MCP Server: github-mcp [MEDIUM] 
+      Tools/perms: repo:read, issues:write, admin                                                   
+      → .mcp.json                                                                                   
+      ⚠ remote MCP endpoint                                                                         
+      ⚠ broad permissions                                                                           
+      ⚑ [MEDIUM] remote-mcp                                                                         
+        MCP connects to a remote server via URL; server security and availability affect trust.     
+        OWASP: LLM03, LLM10                                                                         
+        Governance: ISO 42001 A.10                                                                  
+        Fix: Verify the remote server is trusted; require HTTPS and validate certificates.          
+      ⚑ [MEDIUM] broad-permissions                                                                  
+        MCP is granted broad permissions (admin/write/delete/wildcard scopes).                      
+        OWASP: LLM06                                                                                
+        Fix: Scope permissions to the minimum the workflow requires.                                
+      Trust: verified (90/100)                                                                      
+      → validate this surface                                                                       
+      → validate at runtime: Coming soon: MCP runtime validation in APIsec                          
+  • MCP Server: stripe-mcp [HIGH] 
+      Tools/perms: read_charges, refund, customer:read                                              
+      → .mcp.json                                                                                   
+      ⚠ unverified source                                                                           
+      ⚠ financial action exposed                                                                    
+      ⚑ [MEDIUM] unverified-source                                                                  
+        MCP is not from a known/verified publisher; its behaviour and security posture are unknown. 
+        OWASP: LLM03                                                                                
+        Governance: ISO 42001 A.10                                                                  
+        Fix: Review the source before use; prefer official/verified MCPs; run unverified MCPs in    
+        isolation.                                                                                  
+      ⚑ [HIGH] financial-action                                                                     
+        MCP exposes financial tools (refund, charge, payout) to the model.                          
+        OWASP: LLM06                                                                                
+        Governance: EU AI Act Art. 9                                                                
+        Fix: Gate financial tools behind human approval.                                            
+      ⚑ [HIGH] no-human-oversight                                                                   
+        High-risk action (financial-action) runs with no human approval / in-the-loop gate detected 
+        OWASP: LLM06, LLM09                                                                         
+        Governance: EU AI Act Art. 14                                                               
+        Fix: Put a human-in-the-loop approval step in front of this action (approval gate,          
+        confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate
+        sits on this path.                                                                          
+      Trust: verified (90/100)                                                                      
+      → validate this surface                                                                       
+      → validate at runtime: Coming soon: MCP runtime validation in APIsec                          
+  • MCP Server (in-house): src/orders_mcp_server.py [HIGH] 
+      Tools/perms: lookup_order, refund_payment, cancel_order, delete_customer, update_record       
+      → src/orders_mcp_server.py                                                                    
+      ⚠ in-house MCP server (custom code, audit recommended)                                        
+      ⚠ unverified source                                                                           
+      ⚠ financial action exposed                                                                    
+      ⚑ [MEDIUM] unverified-source                                                                  
+        MCP is not from a known/verified publisher; its behaviour and security posture are unknown. 
+        OWASP: LLM03                                                                                
+        Governance: ISO 42001 A.10                                                                  
+        Fix: Review the source before use; prefer official/verified MCPs; run unverified MCPs in    
+        isolation.                                                                                  
+      ⚑ [HIGH] financial-action                                                                     
+        MCP exposes financial tools (refund, charge, payout) to the model.                          
+        OWASP: LLM06                                                                                
+        Governance: EU AI Act Art. 9                                                                
+        Fix: Gate financial tools behind human approval.                                            
+      ⚑ [HIGH] no-human-oversight                                                                   
+        High-risk action (financial-action) runs with no human approval / in-the-loop gate detected 
+        OWASP: LLM06, LLM09                                                                         
+        Governance: EU AI Act Art. 14                                                               
+        Fix: Put a human-in-the-loop approval step in front of this action (approval gate,          
+        confirmation, or a LangGraph interrupt). If approval is enforced elsewhere, confirm the gate
+        sits on this path.                                                                          
+      Trust: unknown                                                                                
+      → validate this surface                                                                       
+      → validate at runtime: Coming soon: MCP runtime validation in APIsec                          
 
 MODEL GATEWAYS
   • Model Gateway: LiteLLM
-      Tools/perms: claude-sonnet-4, gpt-4, bedrock-claude                       
-      → litellm.config.yaml                                                     
-      ⚠ multi-model routing layer (production traffic flows through this)       
-      → validate this surface                                                   
+      Tools/perms: claude-sonnet-4, gpt-4, bedrock-claude                                           
+      → litellm.config.yaml                                                                         
+      ⚠ multi-model routing layer (production traffic flows through this)                           
+      → validate this surface                                                                       
 
 AI INFRASTRUCTURE
   • K8s AI Workload: vllm (in deploy/vllm-embeddings.yaml)
-      → deploy/vllm-embeddings.yaml                                             
-      ⚠ self-hosted LLM runtime (operational responsibility on the team)        
-      → validate this surface                                                   
+      → deploy/vllm-embeddings.yaml                                                                 
+      ⚠ self-hosted LLM runtime (operational responsibility on the team)                            
+      → validate this surface                                                                       
   • Bedrock provisioned throughput: anthropic.claude-sonnet-4-20250514-v1:0
-      → deploy/bedrock.tf                                                       
-      ⚠ high-cost AI infrastructure (billing exposure)                          
-      → validate this surface                                                   
+      → deploy/bedrock.tf                                                                           
+      ⚠ high-cost AI infrastructure (billing exposure)                                              
+      → validate this surface                                                                       
 
 AI PROVIDER API KEYS
   • AI Provider API Keys
-      → .env.example                                                            
-      ⚠ multiple AI provider keys present                                       
-      ⚠ observability/tracing key present (production telemetry to third party) 
-      → validate this surface                                                   
+      → .env.example                                                                                
+      ⚠ multiple AI provider keys present                                                           
+      ⚠ observability/tracing key present (production telemetry to third party)                     
+      → validate this surface                                                                       
 
-────────────────────────────────────────────────────────────────────────────────
-Risk indicators (13):
+API ENDPOINTS
+  • REST API: GET /health
+      Endpoint: GET /health                                                                         
+      framework: fastapi · auth: unknown                                                            
+      → src/api.py                                                                                  
+      → validate at runtime: Onboard this API for outside-in runtime testing in APIsec              
+  • REST API: GET /orders/{order_id}
+      Endpoint: GET /orders/{order_id}                                                              
+      framework: fastapi · auth: unknown                                                            
+      → src/api.py                                                                                  
+      ⚠ object-id in path (BOLA candidate)                                                          
+      → validate this surface                                                                       
+      → validate at runtime: Onboard this API for outside-in runtime testing in APIsec              
+  • REST API: GET /customers/{customer_id}
+      Endpoint: GET /customers/{customer_id}                                                        
+      framework: fastapi · auth: unknown                                                            
+      → src/api.py                                                                                  
+      ⚠ object-id in path (BOLA candidate)                                                          
+      → validate this surface                                                                       
+      → validate at runtime: Onboard this API for outside-in runtime testing in APIsec              
+  • REST API: PATCH /customers/{customer_id}
+      Endpoint: PATCH /customers/{customer_id}                                                      
+      framework: fastapi · auth: unknown                                                            
+      → src/api.py                                                                                  
+      ⚠ object-id in path (BOLA candidate)                                                          
+      → validate this surface                                                                       
+      → validate at runtime: Onboard this API for outside-in runtime testing in APIsec              
+
+VECTOR-STORE
+  • Vector store: pgvector
+      → src/knowledge_base.py                                                                       
+      ⚠ retrieved content reaches the model (retrieval-augmented generation)                        
+      ⚠ application data embedded for retrieval                                                     
+      ⚠ ingests external content (RAG poisoning surface)                                            
+      → validate this surface                                                                       
+  • RAG pipeline: LangChain
+      → src/knowledge_base.py                                                                       
+      ⚠ retrieved content reaches the model (retrieval-augmented generation)                        
+      ⚠ application data embedded for retrieval                                                     
+      ⚠ ingests external content (RAG poisoning surface)                                            
+      → validate this surface                                                                       
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Risk indicators (25):
+  ⚠ MCP Server: github-mcp: remote MCP endpoint
   ⚠ MCP Server: github-mcp: broad permissions
+  ⚠ MCP Server: stripe-mcp: unverified source
   ⚠ MCP Server: stripe-mcp: financial action exposed
-  ⚠ MCP Server (in-house): src/orders_mcp_server.py: in-house MCP server (custom
-code, audit recommended)
+  ⚠ MCP Server (in-house): src/orders_mcp_server.py: in-house MCP server (custom code, audit 
+recommended)
+  ⚠ MCP Server (in-house): src/orders_mcp_server.py: unverified source
   ⚠ MCP Server (in-house): src/orders_mcp_server.py: financial action exposed
   ⚠ Anthropic SDK: non-literal data flows into LLM call
   ⚠ OpenAI SDK: non-literal data flows into LLM call
-  ⚠ LangChain Agent: support_agent (in src/chat_agent.py): financial action 
-exposed
-  ⚠ LangChain Agent: support_agent (in src/chat_agent.py): high blast-radius 
-combination
+  ⚠ LangChain Agent: support_agent (in src/chat_agent.py): financial action exposed
+  ⚠ LangChain Agent: support_agent (in src/chat_agent.py): high blast-radius combination
   ⚠ AI Provider API Keys: multiple AI provider keys present
-  ⚠ AI Provider API Keys: observability/tracing key present (production 
-telemetry to third party)
-  ⚠ Model Gateway: LiteLLM: multi-model routing layer (production traffic flows 
-through this)
-  ⚠ K8s AI Workload: vllm (in deploy/vllm-embeddings.yaml): self-hosted LLM 
-runtime (operational responsibility on the team)
-  ⚠ Bedrock provisioned throughput: anthropic.claude-sonnet-4-20250514-v1:0: 
-high-cost AI infrastructure (billing exposure)
+  ⚠ AI Provider API Keys: observability/tracing key present (production telemetry to third party)
+  ⚠ Model Gateway: LiteLLM: multi-model routing layer (production traffic flows through this)
+  ⚠ K8s AI Workload: vllm (in deploy/vllm-embeddings.yaml): self-hosted LLM runtime (operational 
+responsibility on the team)
+  ⚠ Bedrock provisioned throughput: anthropic.claude-sonnet-4-20250514-v1:0: high-cost AI 
+infrastructure (billing exposure)
+  ⚠ REST API: GET /orders/{order_id}: object-id in path (BOLA candidate)
+  ⚠ REST API: GET /customers/{customer_id}: object-id in path (BOLA candidate)
+  ⚠ REST API: PATCH /customers/{customer_id}: object-id in path (BOLA candidate)
+  ⚠ Vector store: pgvector: retrieved content reaches the model (retrieval-augmented generation)
+  ⚠ Vector store: pgvector: application data embedded for retrieval
+  ⚠ Vector store: pgvector: ingests external content (RAG poisoning surface)
+  ⚠ RAG pipeline: LangChain: retrieved content reaches the model (retrieval-augmented generation)
+  ⚠ RAG pipeline: LangChain: application data embedded for retrieval
+  ⚠ RAG pipeline: LangChain: ingests external content (RAG poisoning surface)
 
-────────────────────────────────────────────────────────────────────────────────
+────────────────────────────────────────────────────────────────────────────────────────────────────
 For source-level analysis of mcp servers (shell injection, etc.): mcp-audit
-Validate which surfaces are exploitable: apisec.ai/ai-validation
+Validate which surfaces are exploitable: apisec.ai/products
+Validate at runtime in APIsec: mcp-runtime, agent-validation, api-runtime
 
