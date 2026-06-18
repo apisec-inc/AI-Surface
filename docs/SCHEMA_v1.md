@@ -35,7 +35,7 @@ Source of truth for the types: `src/ai_surface/types.py`.
 ```jsonc
 {
   "schema_version": "1.0",
-  "tool_version": "1.0.1",
+  "tool_version": "1.0.2",
   "scan_root": "/abs/path",
   "scan_timestamp": "2026-06-11T00:00:00+00:00",   // ISO 8601 UTC
   "detectors_run": ["llm_sdks", "mcp_audit", "api_endpoints", ...],

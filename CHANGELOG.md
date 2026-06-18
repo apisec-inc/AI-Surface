@@ -4,6 +4,12 @@ All notable changes to `ai-surface` will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-06-17
+
+### Changed
+
+- Widened two dependency upper bounds so installs are not pinned to old majors: `rich` to `>=13.0.0,<16.0.0` (allows rich 14/15) and `pathspec` to `>=0.11.0,<2.0.0` (allows pathspec 1.x). The full suite passes against rich 15.0.0 and pathspec 1.1.1. This removes install conflicts for projects already on newer versions of those libraries.
+
 ## [1.0.1] - 2026-06-17
 
 A maintenance release focused on the GitHub Action output, link correctness, and the `--ui` runtime-validation panel.
