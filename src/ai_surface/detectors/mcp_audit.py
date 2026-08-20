@@ -26,6 +26,7 @@ from pathlib import Path
 from typing import Any
 
 from ..data.mcp import owasp_llm, registry
+from ..data.mcp.allowlist_bypass_binaries import detect_unsafe_command_allowlist
 from ..data.mcp.risk_definitions import get_risk_flag_info
 from ..data.mcp.secret_patterns import detect_secrets
 from ..types import CATEGORY_MCP_SERVER as _CATEGORY
@@ -159,6 +160,12 @@ def _identify_risks(
 
     if command and (command.startswith("./") or command.startswith("/")):
         risks.append("local-binary")
+
+    # A command allowlist (e.g. ALLOW_COMMANDS) that names a binary with its own
+    # argument-level execution primitive does not actually restrict execution:
+    # allowlisting argv[0] alone is bypassable (git -c alias, find -exec, python -c).
+    if detect_unsafe_command_allowlist(env):
+        risks.append("unsafe-command-allowlist")
 
     return risks
 

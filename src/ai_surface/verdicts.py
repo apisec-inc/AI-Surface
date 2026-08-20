@@ -43,6 +43,7 @@ CONFIRMED_FLAGS = {
     "broad-permissions",
     "high-blast-radius",
     "excessive-agency",
+    "unsafe-command-allowlist",
 }
 
 #: Flags that are inference, reputation, or absence-of-signal. Named explicitly

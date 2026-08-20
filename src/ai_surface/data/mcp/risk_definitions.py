@@ -24,6 +24,21 @@ RISK_FLAGS: dict[str, dict[str, Any]] = {
             "allowlist of commands and run in a sandbox."
         ),
     },
+    "unsafe-command-allowlist": {
+        "severity": "critical",
+        "description": (
+            "MCP is configured with a command allowlist (e.g. ALLOW_COMMANDS) that "
+            "names a binary with its own argument-level execution primitive. "
+            "Checking argv[0] alone does not restrict execution when the allowlisted "
+            "binary can be told to run arbitrary commands (git -c alias, find -exec, "
+            "python -c)."
+        ),
+        "remediation": (
+            "Do not rely on binary-name allowlists alone; allowlist the full argument "
+            "vector, strip dangerous flags (-c, -exec, -e, --checkpoint-action), or run "
+            "the binary in a sandbox with no ambient credentials or network access."
+        ),
+    },
     "filesystem-access": {
         "severity": "high",
         "description": (

@@ -27,6 +27,7 @@ FLAG_TO_OWASP: dict[str, list[str]] = {
     "filesystem-access": ["LLM06"],
     "filesystem-write": ["LLM06"],
     "network-access": ["LLM06"],
+    "unsafe-command-allowlist": ["LLM06"],
     "secrets-in-env": ["LLM02", "LLM07"],
     "secrets-detected": ["LLM02", "LLM07"],
     "admin-credentials": ["LLM02", "LLM06"],
