@@ -3,7 +3,7 @@
 #
 #   repos:
 #     - repo: https://github.com/apisec-inc/AI-Surface
-#       rev: v1.0.7
+#       rev: v1.1.0
 #       hooks:
 #         - id: ai-surface
 #

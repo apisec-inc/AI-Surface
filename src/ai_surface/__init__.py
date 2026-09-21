@@ -1,2 +1,2 @@
 """ai-surface: Map the AI attack surface in your application code."""
-__version__ = "1.0.8"
+__version__ = "1.1.0"

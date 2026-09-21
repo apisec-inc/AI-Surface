@@ -6,13 +6,13 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
-[![Version](https://img.shields.io/badge/version-1.0.7-blue.svg)](https://github.com/apisec-inc/AI-Surface/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](https://github.com/apisec-inc/AI-Surface/blob/main/CHANGELOG.md)
 [![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](https://github.com/apisec-inc/AI-Surface/tree/main/tests)
 [![Runs offline](https://img.shields.io/badge/no_telemetry-runs_offline-brightgreen.svg)](https://github.com/apisec-inc/AI-Surface/blob/main/docs/PRIVACY.md)
 
 </div>
 
-`ai-surface` maps the AI attack surface in your codebase: LLM calls, agents, MCP servers, RAG/vector stores, model gateways, self-hosted runtimes, provider keys, and the HTTP APIs that expose them. Run it locally or in CI to see what AI surfaces a PR introduces, generate an AI-BOM, and gate new high-risk findings before merge.
+`ai-surface` maps the AI attack surface in your codebase: LLM calls, agents, MCP servers, RAG/vector stores, model gateways, self-hosted runtimes, provider keys, and the HTTP APIs that expose them. Run it locally, in CI, or inside your AI coding tool to see what AI surfaces a change introduces, generate an AI-BOM, and gate new high-risk findings before merge.
 
 Most layers of a codebase already have a check that runs before merge: Trivy for container images, Gitleaks for committed secrets, an SCA for dependencies. The AI layer, the agents, MCP servers, RAG, and LLM calls, has not had one. `ai-surface` is that check.
 
@@ -57,6 +57,7 @@ Built for DevOps, DevSecOps, platform engineering, AppSec, and security-minded e
 - [What the output looks like](#what-the-output-looks-like)
 - [First run on a mature repo](#first-run-on-a-mature-repo)
 - [GitHub Action and CI gating](#github-action-and-ci-gating)
+- [Inside your AI coding tool: MCP server and Claude Code hook](#inside-your-ai-coding-tool-mcp-server-and-claude-code-hook)
 - [Open the local UI](#open-the-local-ui)
 - [What it detects](#what-it-detects)
 - [Proven on real code](#proven-on-real-code)
@@ -210,6 +211,32 @@ ai-surface scan . --fail-on high
 
 See [`docs/CI_INTEGRATION.md`](https://github.com/apisec-inc/AI-Surface/blob/main/docs/CI_INTEGRATION.md) for permissions, fork PR behavior, baseline options, SARIF upload, policy files, and multi-repo rollups.
 
+## Inside your AI coding tool: MCP server and Claude Code hook
+
+AI assistants now write a growing share of application code, and AI-written code is exactly where new AI attack surface appears: a new agent tool, a new MCP server, a new LLM call, usually added by someone who cannot see what they just exposed. `ai-surface` can sit inside that loop and flag the surface at the moment it is created.
+
+Two pieces, both local, offline, and read-only:
+
+- **An MCP server.** `ai-surface mcp` exposes two tools to any MCP client (Claude Code, Cursor, Windsurf, Cline): `scan_ai_surface` inventories a path, and `check_new_ai_surface` reports only what changed since the last check, with the OWASP LLM Top 10 ids and EU AI Act, NIST AI RMF, and ISO 42001 clauses for each finding.
+- **A Claude Code hook.** `ai-surface hook claude-code` runs automatically after every edit. When a change introduces or expands AI surface, the finding is injected into the session so Claude tells you and can offer a guard, for example a human approval step in front of a refund tool. It is silent on ordinary edits, never fails a tool call, and keeps its rolling baseline outside your repository.
+
+Set both up for a repo with one command:
+
+```bash
+pip install "apisec-ai-surface[mcp]"   # the MCP server needs Python 3.10+; the hook has no extra needs
+ai-surface init --claude-code
+```
+
+This writes the hook into `.claude/settings.json` and the server into `.mcp.json`, merging with anything already there. Start `claude` in the repo and approve both when prompted.
+
+For Cursor and other MCP clients, register the server as a stdio command:
+
+```json
+{ "mcpServers": { "ai-surface": { "command": "ai-surface", "args": ["mcp"] } } }
+```
+
+The pre-commit hook and the GitHub Action remain the editor-agnostic guarantees: they catch the same surface regardless of which tool wrote the code. See [`docs/INTEGRATIONS.md`](https://github.com/apisec-inc/AI-Surface/blob/main/docs/INTEGRATIONS.md) for the tool reference, the hook contract, where state is kept, and troubleshooting.
+
 ## Open the local UI
 
 After installing `ai-surface`, you can open the interactive AI attack-surface map from any repo:
@@ -340,6 +367,15 @@ ai-surface scan . --baseline --fail-on high
 ai-surface compare base.json head.json
 ```
 
+Editor and agent integrations:
+
+| Command | What it does |
+|---|---|
+| `ai-surface init --claude-code` | Wire the hook and the MCP server into this repo's Claude Code config |
+| `ai-surface mcp` | Run the MCP server over stdio (needs the `[mcp]` extra, Python 3.10+) |
+| `ai-surface hook claude-code` | The Claude Code `PostToolUse` / `SessionStart` hook; reads the payload on stdin |
+| `ai-surface hook claude-code --reset` | Forget the hook's rolling baseline for the current repo |
+
 ## Compliance and governance
 
 `ai-surface` maps audited findings to the OWASP LLM Top 10 and to evidence-relevant clauses in the EU AI Act, NIST AI RMF, and ISO/IEC 42001.
@@ -436,6 +472,7 @@ Trivy checks container images, Gitleaks checks git history, an SCA checks depend
 
 | Version | Status | What's in it |
 |---|---|---|
+| v1.1 | Shipped | MCP server (`ai-surface mcp`) for Claude Code, Cursor, Windsurf, Cline; Claude Code post-edit hook; `ai-surface init --claude-code`. |
 | v1.0 | Shipped | 8-category mapping, MCP + agent + RAG audits, OWASP + EU/NIST/ISO governance mapping, AI-BOM + SARIF, interactive `--ui` map, frozen schema 1.0, GitHub Action with PR diff comments, `--baseline` and `--fail-on` gates. |
 | Fast-follow | Planned | AST / cross-file dataflow for tool resolution, `.ai-surface.yml` policy file, GitLab CI component. |
 | Later | Planned | kubectl plugin, live cluster discovery, continuous mode + drift alerts, multi-repo rollup, plugin SDK. |

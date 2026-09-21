@@ -43,13 +43,18 @@ def report_to_dict(report: Report) -> dict[str, Any]:
         # Governance-framework evidence this scan produces (honest evidence-for,
         # not a compliance claim). Lets the UI and reporters surface it.
         "frameworks": framework_evidence(report),
-        "findings": [_finding_to_dict(f) for f in report.findings],
+        "findings": [finding_to_dict(f) for f in report.findings],
         "errors": list(report.errors),
     }
 
 
-def _finding_to_dict(finding: Any) -> dict[str, Any]:
-    """asdict-compatible conversion that flattens Evidence nicely."""
+def finding_to_dict(finding: Any) -> dict[str, Any]:
+    """Serialize one Finding exactly as it appears inside the JSON report.
+
+    Public so integrations (MCP server, editor hooks) can shape a single
+    finding, including the governance ``standards`` join, without rendering a
+    whole report.
+    """
     from ..frameworks import standards_for_flag  # noqa: PLC0415
 
     d = asdict(finding)
@@ -60,3 +65,7 @@ def _finding_to_dict(finding: Any) -> dict[str, Any]:
         for rf in audit.get("risk_flags", []):
             rf["standards"] = standards_for_flag(rf.get("flag", ""))
     return d
+
+
+# Backward-compatible private alias.
+_finding_to_dict = finding_to_dict

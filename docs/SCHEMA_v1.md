@@ -145,3 +145,7 @@ So the UI and the API-runtime bridge read them uniformly:
 
 All bridge URLs carry `utm_source=ai-surface`, `utm_medium=<cli|ui|pr-comment>`,
 `utm_campaign=oss-funnel` for attribution.
+
+## Diff output (`--baseline -o json`)
+
+Diff entries reuse this schema. `added` and `removed` are full finding objects, serialized exactly as in a report, so each audit `risk_flags` entry carries its `standards` list. `modified` entries are deltas: `permissions_added`, `permissions_removed`, `risks_added`, `risks_removed`, `files_added`, `files_removed`.

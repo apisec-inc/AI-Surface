@@ -219,7 +219,11 @@ def diff_to_dict(diff: Diff) -> dict[str, Any]:
 
 
 def _finding_to_dict(finding: Finding) -> dict[str, Any]:
-    return asdict(finding)
+    # Route through the JSON reporter so added/removed entries in a diff carry
+    # the same governance ``standards`` join as findings in a full report.
+    from .reporters.json_reporter import finding_to_dict  # noqa: PLC0415
+
+    return finding_to_dict(finding)
 
 
 # ---------------------------------------------------------------------------

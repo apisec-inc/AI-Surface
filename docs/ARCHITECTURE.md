@@ -15,6 +15,7 @@ This document is for contributors and operators who want to understand the tool 
 - [The diff engine](#the-diff-engine)
 - [Validation and next-step links](#validation-and-next-step-links)
 - [GitHub Action wrapper](#github-action-wrapper)
+- [Editor and agent integrations](#editor-and-agent-integrations)
 - [Adding a new detector](#adding-a-new-detector)
 - [Performance characteristics](#performance-characteristics)
 
@@ -246,6 +247,16 @@ sequenceDiagram
 The Action is a thin shell. All the logic is in the Python CLI; the Action just orchestrates the analysis, comparison, and comment posting, so local CLI and CI behavior stay consistent.
 
 **Network boundary.** The local CLI performs no network calls. When `comment-on-pr` is enabled in GitHub Actions, the action uses the repository's `GITHUB_TOKEN` to post or update a PR comment through the GitHub API. It does not send source code, findings, or metadata to APIsec.
+
+## Editor and agent integrations
+
+`src/ai_surface/integrations/` puts the scanner inside the tools that write code. Three modules:
+
+- `core.py` is the shared engine. It runs the same orchestrator and detector set as the CLI in-process, serializes findings through the JSON reporter (so governance `standards` are always joined), and implements the one operation both integrations need: "what did this change introduce?" as a diff against a rolling baseline. That baseline is written atomically under a per-user state directory, keyed by repository path and namespaced per integration, never inside the repository. It is advanced only after a diff succeeds, so a failed scan cannot lose a finding.
+- `mcp_server.py` exposes `scan_ai_surface` and `check_new_ai_surface` over stdio. The `mcp` package is imported lazily and both the 2.x (`MCPServer`) and 1.x (`FastMCP`) server classes are supported; without the package the command explains the `[mcp]` extra. The tool functions are plain functions and are unit-tested without the SDK.
+- `claude_code_hook.py` reads a Claude Code hook payload on stdin. `SessionStart` seeds the baseline; `PostToolUse` diffs and, when surface was added or expanded, prints `hookSpecificOutput.additionalContext` plus a `systemMessage`. It always exits 0 and refuses to scan a home directory or filesystem root.
+
+`ai-surface init --claude-code` writes the two config entries and is idempotent. See [docs/INTEGRATIONS.md](INTEGRATIONS.md).
 
 ## Adding a new detector
 

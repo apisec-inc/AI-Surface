@@ -842,16 +842,31 @@ def init(
     force: bool = typer.Option(
         False, "--force", help="Overwrite an existing workflow file."
     ),
+    claude_code: bool = typer.Option(
+        False,
+        "--claude-code",
+        help=(
+            "Instead of the CI workflow, wire ai-surface into Claude Code for this "
+            "repo: an automatic post-edit hook in .claude/settings.json and the MCP "
+            "server in .mcp.json. Existing entries in those files are kept."
+        ),
+    ),
 ) -> None:
-    """Wire ai-surface into this repo's CI with one command.
+    """Wire ai-surface into this repo with one command.
 
-    Writes .github/workflows/ai-surface.yml so every pull request is gated on
-    net-new AI attack surface, and prints the pre-commit snippet for local use.
+    Default: writes .github/workflows/ai-surface.yml so every pull request is
+    gated on net-new AI attack surface, and prints the pre-commit snippet for
+    local use. With --claude-code: sets up the Claude Code hook and MCP server
+    for this repo instead.
     """
     root = Path(path).resolve()
     if not root.is_dir():
         err_console.print(f"[red]Not a directory:[/red] {root}")
         raise typer.Exit(code=2)
+
+    if claude_code:
+        _init_claude_code(root)
+        return
 
     workflow_path = root / ".github" / "workflows" / "ai-surface.yml"
     if workflow_path.exists() and not force:
@@ -888,6 +903,136 @@ def init(
         "[link=https://github.com/apisec-inc/AI-Surface]"
         "github.com/apisec-inc/AI-Surface[/link][/dim]"
     )
+
+
+_CLAUDE_HOOK_COMMAND = "ai-surface hook claude-code"
+_CLAUDE_POST_TOOL_MATCHER = "Edit|Write|MultiEdit|NotebookEdit|Bash"
+
+
+def _load_json_object(path: Path) -> Dict[str, object]:
+    """Read a JSON object from ``path``; missing file -> {}; invalid -> exit 2."""
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8") or "{}")
+    except (OSError, json.JSONDecodeError) as exc:
+        err_console.print(f"[red]error[/red]: cannot read {path}: {exc}")
+        raise typer.Exit(code=2) from exc
+    if not isinstance(data, dict):
+        err_console.print(f"[red]error[/red]: {path} is not a JSON object")
+        raise typer.Exit(code=2)
+    return data
+
+
+def _ensure_hook(settings: Dict[str, object], event: str, matcher: Optional[str]) -> bool:
+    """Add the ai-surface hook for ``event`` unless an identical one exists."""
+    hooks = settings.setdefault("hooks", {})
+    if not isinstance(hooks, dict):
+        err_console.print("[red]error[/red]: settings 'hooks' is not an object")
+        raise typer.Exit(code=2)
+    groups = hooks.setdefault(event, [])
+    if not isinstance(groups, list):
+        err_console.print(f"[red]error[/red]: settings hooks.{event} is not a list")
+        raise typer.Exit(code=2)
+    for group in groups:
+        if not isinstance(group, dict):
+            continue
+        for h in group.get("hooks", []) or []:
+            if isinstance(h, dict) and _CLAUDE_HOOK_COMMAND in str(h.get("command", "")):
+                return False
+    entry: Dict[str, object] = {"hooks": [{"type": "command", "command": _CLAUDE_HOOK_COMMAND}]}
+    if matcher:
+        entry["matcher"] = matcher
+    groups.append(entry)
+    return True
+
+
+def _init_claude_code(root: Path) -> None:
+    """Write the Claude Code hook + MCP server config for ``root`` (merging)."""
+    settings_path = root / ".claude" / "settings.json"
+    settings = _load_json_object(settings_path)
+    added_post = _ensure_hook(settings, "PostToolUse", _CLAUDE_POST_TOOL_MATCHER)
+    added_start = _ensure_hook(settings, "SessionStart", None)
+    if added_post or added_start:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        settings_path.write_text(json.dumps(settings, indent=2) + "\n", encoding="utf-8")
+        console.print(f"[green]Wrote[/green] {settings_path.relative_to(root)} (hook)")
+    else:
+        console.print(f"{settings_path.relative_to(root)}: hook already present")
+
+    mcp_path = root / ".mcp.json"
+    mcp_cfg = _load_json_object(mcp_path)
+    servers = mcp_cfg.setdefault("mcpServers", {})
+    if not isinstance(servers, dict):
+        err_console.print("[red]error[/red]: .mcp.json 'mcpServers' is not an object")
+        raise typer.Exit(code=2)
+    if "ai-surface" in servers:
+        console.print(f"{mcp_path.name}: MCP server already present")
+    else:
+        servers["ai-surface"] = {"command": "ai-surface", "args": ["mcp"]}
+        mcp_path.write_text(json.dumps(mcp_cfg, indent=2) + "\n", encoding="utf-8")
+        console.print(f"[green]Wrote[/green] {mcp_path.name} (MCP server)")
+
+    console.print()
+    console.print(
+        "Claude Code will now run an AI-surface check after every edit in this "
+        "repo and expose the scan_ai_surface / check_new_ai_surface tools."
+    )
+    console.print("Next steps:")
+    console.print("  1. Start `claude` in this repo and approve the project hook and MCP server.")
+    console.print(
+        "  2. The MCP server needs the optional extra: "
+        'pip install "apisec-ai-surface\\[mcp]" (Python 3.10+). The hook has no extra needs.'
+    )
+    console.print(
+        "  3. Both must be able to find `ai-surface` on PATH from Claude Code "
+        "(pipx installs satisfy this)."
+    )
+
+
+@app.command()
+def mcp() -> None:
+    """Run ai-surface as an MCP server over stdio (for Claude Code, Cursor, and others).
+
+    Exposes scan_ai_surface and check_new_ai_surface. Read-only, offline, no
+    network listener. Needs the optional extra: pip install "apisec-ai-surface[mcp]".
+    """
+    from .integrations.mcp_server import serve  # noqa: PLC0415
+
+    try:
+        serve()
+    except RuntimeError as exc:
+        err_console.print(f"[red]error[/red]: {exc}")
+        raise typer.Exit(code=2) from exc
+
+
+hook_app = typer.Typer(
+    help="Editor hooks that run ai-surface automatically.",
+    no_args_is_help=True,
+)
+app.add_typer(hook_app, name="hook")
+
+
+@hook_app.command("claude-code")
+def hook_claude_code(
+    reset: bool = typer.Option(
+        False,
+        "--reset",
+        help="Forget the rolling baseline for the current repo and exit.",
+    ),
+) -> None:
+    """Claude Code PostToolUse / SessionStart hook (reads the payload on stdin).
+
+    Reports AI attack surface that an edit just introduced. Silent otherwise.
+    Never fails the tool call. Set up with: ai-surface init --claude-code
+    """
+    from .integrations import claude_code_hook  # noqa: PLC0415
+
+    if reset:
+        bp = claude_code_hook.reset()
+        print(f"cleared {bp}")
+        return
+    raise typer.Exit(code=claude_code_hook.main())
 
 
 @app.command()

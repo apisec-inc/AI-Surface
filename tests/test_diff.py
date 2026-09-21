@@ -291,3 +291,22 @@ def test_loaded_scan_root_redacts_path_in_diff_output() -> None:
     diff = compute_diff(base, head)
     assert "/" not in diff.base_scan_root
     assert "victim" not in diff.base_scan_root
+
+
+def test_diff_json_added_entries_carry_governance_standards(tmp_path):
+    """Regression: `--baseline -o json` must include the standards join on added
+    findings, exactly like a full report, so consumers see the same compliance
+    mapping in both."""
+    from ai_surface.diff import diff_to_dict
+    from ai_surface.integrations import core
+    from tests.test_integrations_core import NEW_AGENT
+
+    before = tmp_path / "before"
+    before.mkdir()
+    after = tmp_path / "after"
+    (after / "src").mkdir(parents=True)
+    (after / "src" / "admin.py").write_text(NEW_AGENT)
+    d = diff_to_dict(compute_diff(core.scan_report(before), core.scan_report(after)))
+    assert d["added"], "expected the new agent to be reported as added"
+    flags = d["added"][0]["audit"]["risk_flags"]
+    assert any(rf.get("standards") for rf in flags)
