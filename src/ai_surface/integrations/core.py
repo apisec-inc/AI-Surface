@@ -239,6 +239,13 @@ def shape_diff(diff: Diff, head: Report, path: str) -> dict[str, Any]:
         modified.append(entry)
     removed = [compact_finding(_bare_finding_dict(f)) for f in diff.removed]
     total = diff.total_changes
+    cleared = sum(len(c.risks_removed) for c in diff.modified)
+    summary = (
+        f"{len(diff.added)} new, {len(diff.modified)} modified, "
+        f"{len(diff.removed)} removed AI surface(s) since baseline."
+    )
+    if cleared:
+        summary += f" {cleared} risk(s) cleared."
     return {
         "path": path,
         "changed": total > 0,
@@ -246,10 +253,8 @@ def shape_diff(diff: Diff, head: Report, path: str) -> dict[str, Any]:
         "new_surfaces": new_surfaces,
         "modified_surfaces": modified,
         "removed_surfaces": removed,
-        "summary": (
-            f"{len(diff.added)} new, {len(diff.modified)} modified, "
-            f"{len(diff.removed)} removed AI surface(s) since baseline."
-        ),
+        "summary": summary,
+        "risks_cleared": cleared,
         "runtime_note": RUNTIME_NOTE if (diff.added or risks_added_any) else None,
     }
 

@@ -79,6 +79,18 @@ _OVERSIGHT_RE = re.compile("|".join(_OVERSIGHT_PATTERNS), re.IGNORECASE)
 # (the action runs unattended) and Overreliance (no human in the decision).
 _OVERSIGHT_OWASP = ["LLM06", "LLM09"]
 
+#: Severity-free indicator mirrored onto ``Finding.risk_indicators`` whenever
+#: the ``no-human-oversight`` flag is added. Indicators survive the rolling
+#: baseline (audit data does not), so this is what lets a later diff report
+#: the risk as cleared once an approval gate lands.
+OVERSIGHT_INDICATOR = "no human approval gate on a high-risk action"
+
+#: Remediation shown on action flags once a gate IS detected on the path.
+_GATED_REMEDIATION = (
+    "Approval gate detected on this path. Keep it in front of the action and "
+    "least-privilege the agent."
+)
+
 
 def has_oversight(text: str) -> bool:
     """True if ``text`` shows any human approval / human-in-the-loop pattern."""
@@ -159,14 +171,26 @@ def enrich_oversight(findings: list[Finding], scan_root: str | None = None) -> N
             continue
         if any(rf.flag == "no-human-oversight" for rf in audit.risk_flags):
             continue
+        actions = _action_flags(audit)
+        if not actions:
+            continue
+        if has_oversight(_evidence_text(f, scan_root)):
+            # A gate is on the path: say so on the action flags instead of
+            # repeating "gate it", so a fixed finding does not read as unfixed.
+            for rf in audit.risk_flags:
+                if rf.flag in _ACTION_FLAGS:
+                    rf.remediation = _GATED_REMEDIATION
+            continue
         flag = oversight_flag(f, scan_root)
         if not flag:
             continue
         audit.risk_flags.append(flag)
+        if OVERSIGHT_INDICATOR not in f.risk_indicators:
+            f.risk_indicators.append(OVERSIGHT_INDICATOR)
         for oid in flag.owasp:
             if oid not in audit.owasp_mappings:
                 audit.owasp_mappings.append(oid)
         _bump_severity(f)
 
 
-__all__ = ["has_oversight", "oversight_flag", "enrich_oversight"]
+__all__ = ["has_oversight", "oversight_flag", "enrich_oversight", "OVERSIGHT_INDICATOR"]
