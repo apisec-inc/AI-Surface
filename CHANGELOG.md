@@ -6,10 +6,10 @@ All notable changes to `ai-surface` will be documented in this file. The format 
 
 ## [1.1.1] - 2026-10-08
 
-The in-the-loop integrations now close the loop: a fix gets an all-clear, not silence.
+**Fix confirmation.** The in-the-loop integrations now close the loop: when a developer resolves a risk that ai-surface flagged, ai-surface confirms it, by name, in the same session.
 
 ### Added
-- **The hook and MCP diff now report cleared risks.** When an edit puts a human approval gate in front of a flagged financial or destructive action, the Claude Code hook posts "a flagged risk was cleared by this edit" and the `check_new_ai_surface` diff reports `risks_removed` and a `risks_cleared` count, instead of staying silent. Previously the rolling baseline only ever reported additions, so a fix produced no feedback.
+- **Fix confirmation: the hook and MCP diff report cleared risks.** When an edit puts a human approval gate in front of a flagged financial or destructive action, the Claude Code hook posts "a flagged risk was cleared by this edit" and the `check_new_ai_surface` diff reports `risks_removed` and a `risks_cleared` count, instead of staying silent. Previously the rolling baseline only ever reported additions, so a fix produced no feedback.
 
 ### Changed
 - The `no-human-oversight` audit flag is mirrored as a severity-free risk indicator (`no human approval gate on a high-risk action`) so the gate's absence and its later presence both survive the baseline diff.

@@ -218,7 +218,7 @@ AI assistants now write a growing share of application code, and AI-written code
 Two pieces, both local, offline, and read-only:
 
 - **An MCP server.** `ai-surface mcp` exposes two tools to any MCP client (Claude Code, Cursor, Windsurf, Cline): `scan_ai_surface` inventories a path, and `check_new_ai_surface` reports only what changed since the last check, with the OWASP LLM Top 10 ids and EU AI Act, NIST AI RMF, and ISO 42001 clauses for each finding.
-- **A Claude Code hook.** `ai-surface hook claude-code` runs automatically after every edit. When a change introduces or expands AI surface, the finding is injected into the session so Claude tells you and can offer a guard, for example a human approval step in front of a refund tool. When a later edit puts that guard in place, the hook says so: a flagged risk cleared gets its own all-clear line, so the loop is flag, fix, confirm. It is silent on ordinary edits, never fails a tool call, and keeps its rolling baseline outside your repository.
+- **A Claude Code hook.** `ai-surface hook claude-code` runs automatically after every edit. When a change introduces or expands AI surface, the finding is injected into the session so Claude tells you and can offer a guard, for example a human approval step in front of a refund tool. When a later edit puts that guard in place, the hook says so. This is fix confirmation: a flagged risk cleared gets its own all-clear line, so the loop is flag, fix, confirm. It is silent on ordinary edits, never fails a tool call, and keeps its rolling baseline outside your repository.
 
 Set both up for a repo with one command:
 
@@ -473,7 +473,7 @@ Trivy checks container images, Gitleaks checks git history, an SCA checks depend
 | Version | Status | What's in it |
 |---|---|---|
 | v1.1 | Shipped | MCP server (`ai-surface mcp`) for Claude Code, Cursor, Windsurf, Cline; Claude Code post-edit hook; `ai-surface init --claude-code`. |
-| v1.1.1 | Shipped | The hook and the MCP diff report cleared risks, so a fix gets an all-clear; once an approval gate is detected the remediation says so instead of asking for one. |
+| v1.1.1 | Shipped | Fix confirmation: the hook and the MCP diff report cleared risks, so a fix gets an all-clear; once an approval gate is detected the remediation says so instead of asking for one. |
 | v1.0 | Shipped | 8-category mapping, MCP + agent + RAG audits, OWASP + EU/NIST/ISO governance mapping, AI-BOM + SARIF, interactive `--ui` map, frozen schema 1.0, GitHub Action with PR diff comments, `--baseline` and `--fail-on` gates. |
 | Fast-follow | Planned | AST / cross-file dataflow for tool resolution, `.ai-surface.yml` policy file, GitLab CI component. |
 | Later | Planned | kubectl plugin, live cluster discovery, continuous mode + drift alerts, multi-repo rollup, plugin SDK. |
