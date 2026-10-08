@@ -103,3 +103,30 @@ def test_has_oversight_helper() -> None:
     assert has_oversight("HumanInterrupt()")
     assert not has_oversight("just some code")
     assert not has_oversight("")
+
+
+# --- cleared-risk support: the indicator mirrors the flag, and a detected gate
+# --- rewrites the action flags' remediation instead of repeating "gate it".
+
+def test_enrich_adds_indicator_when_no_gate() -> None:
+    from ai_surface.oversight import OVERSIGHT_INDICATOR
+
+    f = _finding([_financial_flag()], snippet="def refund(amount): stripe.refund(amount)")
+    enrich_oversight([f])
+    assert OVERSIGHT_INDICATOR in f.risk_indicators
+    assert any(rf.flag == "no-human-oversight" for rf in f.audit.risk_flags)
+    # Idempotent on a second pass.
+    enrich_oversight([f])
+    assert f.risk_indicators.count(OVERSIGHT_INDICATOR) == 1
+
+
+def test_enrich_marks_action_flags_as_gated_when_gate_present() -> None:
+    from ai_surface.oversight import OVERSIGHT_INDICATOR
+
+    f = _finding([_financial_flag()], snippet="if requires_approval: await human_review(req)")
+    enrich_oversight([f])
+    assert OVERSIGHT_INDICATOR not in f.risk_indicators
+    assert not any(rf.flag == "no-human-oversight" for rf in f.audit.risk_flags)
+    fin = next(rf for rf in f.audit.risk_flags if rf.flag == "financial-action")
+    assert "Approval gate detected" in fin.remediation
+    assert fin.severity == SEVERITY_HIGH  # severity is not downgraded by a gate

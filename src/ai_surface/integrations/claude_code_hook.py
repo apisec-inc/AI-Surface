@@ -30,6 +30,7 @@ from . import core
 MUTATING_TOOLS = frozenset({"Edit", "Write", "MultiEdit", "NotebookEdit", "Bash"})
 
 ATTRIBUTION_LINE = "\U0001f6e1️ **ai-surface** detected new AI attack surface:"
+CLEARED_LINE = "\U0001f6e1️ **ai-surface** confirmed a risk is cleared:"
 
 
 def repo_root(cwd: str) -> Path:
@@ -85,32 +86,73 @@ def _fmt_modified(c: dict[str, Any]) -> str:
     return line
 
 
-def build_context(result: dict[str, Any]) -> Optional[str]:
-    """Turn a shaped diff into the context injected into the session.
+def _fmt_cleared(c: dict[str, Any]) -> str:
+    line = f"- CLEARED: {c.get('surface')} ({c.get('category')})"
+    line += f"  risk cleared: {', '.join(c['risks_removed'])}"
+    if c.get("permissions_removed"):
+        line += f"  permissions removed: {', '.join(c['permissions_removed'])}"
+    return line
 
-    Returns ``None`` when the change introduced nothing worth reporting.
-    Removed surfaces are not reported: the hook exists to catch additions.
-    """
+
+def _introduced(result: dict[str, Any]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     added = result.get("new_surfaces") or []
     modified = [
         c for c in (result.get("modified_surfaces") or [])
         if c.get("permissions_added") or c.get("risks_added")
     ]
-    if not added and not modified:
-        return None
-    lines = [_fmt_new(f) for f in added] + [_fmt_modified(c) for c in modified]
-    return (
-        "ai-surface (automatic post-edit check) detected AI attack surface "
-        "introduced by this change:\n"
-        + "\n".join(lines)
-        + "\nStatic analysis maps this surface; confirming whether it is "
-        "exploitable against the running app needs runtime testing. Tell the "
-        "user about this new surface. If it involves a financial or destructive "
-        "action, outbound messaging, or broad permissions, offer to add a "
-        "human-in-the-loop approval step before they commit. Begin your report "
-        f"to the user with the exact line '{ATTRIBUTION_LINE}' so the finding is "
-        "clearly attributed to ai-surface."
-    )
+    return added, modified
+
+
+def _cleared(result: dict[str, Any]) -> list[dict[str, Any]]:
+    return [c for c in (result.get("modified_surfaces") or []) if c.get("risks_removed")]
+
+
+def build_context(result: dict[str, Any]) -> Optional[str]:
+    """Turn a shaped diff into the context injected into the session.
+
+    Returns ``None`` when the change neither introduced nor cleared anything
+    worth reporting. Removed surfaces are not reported on their own: the hook
+    exists to catch additions, and to confirm when a flagged risk is cleared.
+    """
+    added, modified = _introduced(result)
+    cleared = _cleared(result)
+    if added or modified:
+        lines = [_fmt_new(f) for f in added] + [_fmt_modified(c) for c in modified]
+        text = (
+            "ai-surface (automatic post-edit check) detected AI attack surface "
+            "introduced by this change:\n"
+            + "\n".join(lines)
+            + "\nStatic analysis maps this surface; confirming whether it is "
+            "exploitable against the running app needs runtime testing. Tell the "
+            "user about this new surface. If it involves a financial or destructive "
+            "action, outbound messaging, or broad permissions, offer to add a "
+            "human-in-the-loop approval step before they commit. Begin your report "
+            f"to the user with the exact line '{ATTRIBUTION_LINE}' so the finding is "
+            "clearly attributed to ai-surface."
+        )
+        if cleared:
+            text += "\nThe same change also cleared:\n" + "\n".join(_fmt_cleared(c) for c in cleared)
+        return text
+    if cleared:
+        return (
+            "ai-surface (automatic post-edit check) confirmed that this change "
+            "cleared a previously flagged risk:\n"
+            + "\n".join(_fmt_cleared(c) for c in cleared)
+            + "\nTell the user which risk is cleared and on which surface. Static "
+            "analysis can see the gate on the path; whether it holds against the "
+            "running app still needs runtime testing. Begin your report to the user "
+            f"with the exact line '{CLEARED_LINE}' so the confirmation is clearly "
+            "attributed to ai-surface."
+        )
+    return None
+
+
+def system_message(result: dict[str, Any]) -> str:
+    """The one-line banner shown to the user for a reportable change."""
+    added, modified = _introduced(result)
+    if added or modified:
+        return "\U0001f6e1️ ai-surface: new AI attack surface detected by this edit"
+    return "\u2705 ai-surface: a flagged risk was cleared by this edit"
 
 
 def handle(payload: dict[str, Any]) -> Optional[dict[str, Any]]:
@@ -137,7 +179,7 @@ def handle(payload: dict[str, Any]) -> Optional[dict[str, Any]]:
     if ctx is None:
         return None
     return {
-        "systemMessage": "\U0001f6e1️ ai-surface: new AI attack surface detected by this edit",
+        "systemMessage": system_message(result),
         "hookSpecificOutput": {"hookEventName": "PostToolUse", "additionalContext": ctx},
     }
 

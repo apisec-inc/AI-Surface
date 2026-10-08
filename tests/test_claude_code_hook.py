@@ -145,3 +145,48 @@ def test_cli_hook_as_subprocess_exit_zero_on_bad_input(state_dir):
     )
     assert proc.returncode == 0
     assert proc.stdout.strip() == ""
+
+
+AGENT_GATED = '''
+from langchain.agents import initialize_agent, Tool
+
+def require_human_approval(action, details):
+    return approvals.request_approval(action=action, details=details)
+
+def refund_payment(order_id, amount):
+    if not require_human_approval("refund_payment", {"order_id": order_id}):
+        return {"status": "rejected"}
+    return payments.refund(order_id=order_id, amount=amount)
+
+tools = [
+    Tool(name="lookup_order", func=lambda x: x, description="look up"),
+    Tool(name="refund_payment", func=refund_payment, description="refund"),
+]
+support_agent = initialize_agent(tools, None)
+'''
+
+
+def test_edit_that_adds_approval_gate_is_reported_as_cleared(state_dir, repo):
+    _run({"hook_event_name": "SessionStart", "cwd": str(repo)})
+    (repo / "src" / "agent.py").write_text(AGENT_AFTER)
+    code, flagged = _run({"hook_event_name": "PostToolUse", "tool_name": "Edit", "cwd": str(repo)})
+    assert "no human approval gate" in flagged["hookSpecificOutput"]["additionalContext"]
+    # The fix: same tool, now behind a human approval gate.
+    (repo / "src" / "agent.py").write_text(AGENT_GATED)
+    code, out = _run({"hook_event_name": "PostToolUse", "tool_name": "Edit", "cwd": str(repo)})
+    assert code == 0 and out is not None
+    assert out["systemMessage"].startswith("✅ ai-surface")
+    ctx = out["hookSpecificOutput"]["additionalContext"]
+    assert "CLEARED: LangChain Agent: support_agent" in ctx
+    assert "risk cleared: no human approval gate on a high-risk action" in ctx
+    assert hook.CLEARED_LINE in ctx
+    assert hook.ATTRIBUTION_LINE not in ctx
+    # Reported once: the baseline advanced again.
+    code, again = _run({"hook_event_name": "PostToolUse", "tool_name": "Edit", "cwd": str(repo)})
+    assert again is None
+
+
+def test_cleared_only_context_is_none_when_nothing_cleared():
+    assert hook.build_context({"new_surfaces": [], "modified_surfaces": [
+        {"surface": "x", "category": "agent-framework", "files_added": ["a.py"]}
+    ]}) is None
