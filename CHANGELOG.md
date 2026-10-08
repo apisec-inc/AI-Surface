@@ -4,12 +4,19 @@ All notable changes to `ai-surface` will be documented in this file. The format 
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-10-08
+
+The in-the-loop integrations now close the loop: a fix gets an all-clear, not silence.
+
 ### Added
 - **The hook and MCP diff now report cleared risks.** When an edit puts a human approval gate in front of a flagged financial or destructive action, the Claude Code hook posts "a flagged risk was cleared by this edit" and the `check_new_ai_surface` diff reports `risks_removed` and a `risks_cleared` count, instead of staying silent. Previously the rolling baseline only ever reported additions, so a fix produced no feedback.
 
 ### Changed
 - The `no-human-oversight` audit flag is mirrored as a severity-free risk indicator (`no human approval gate on a high-risk action`) so the gate's absence and its later presence both survive the baseline diff.
 - Once an approval gate is detected on the path, the `financial-action` and `destructive-action` remediation reads "Approval gate detected on this path. Keep it in front of the action and least-privilege the agent." rather than telling the user to add a gate that is already there. Severity is unchanged.
+
+### Fixed
+- Upgrading from 1.1.0 no longer produces a one-time "risk added: no human approval gate" message for agents that were already ungated: a baseline written by an older version is reconciled on its first diff, so only changes the developer makes are reported.
 
 ## [1.1.0] - 2026-09-21
 
