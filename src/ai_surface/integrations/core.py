@@ -312,11 +312,44 @@ def check_new_surface(
         }
 
     diff = compute_diff(base, report)
+    _reconcile_legacy_baseline(diff, base)
     if advance:
         write_baseline(report, baseline_path)
     out = shape_diff(diff, report, label)
     out["baseline_file"] = str(baseline_path)
     return out
+
+
+#: First version whose baselines carry the oversight indicator (see
+#: ``oversight.OVERSIGHT_INDICATOR``). A baseline written by an older version
+#: cannot contain it, so its first appearance after an upgrade is pre-existing
+#: surface, not a change the developer made.
+_OVERSIGHT_INDICATOR_SINCE = (1, 1, 1)
+
+
+def _version_tuple(text: str) -> tuple[int, ...]:
+    parts: list[int] = []
+    for piece in str(text or "").split("."):
+        digits = "".join(ch for ch in piece if ch.isdigit())
+        if not digits:
+            break
+        parts.append(int(digits))
+    return tuple(parts)
+
+
+def _reconcile_legacy_baseline(diff: Diff, base: Report) -> None:
+    """Drop indicator 'additions' that only exist because the baseline predates
+    the indicator. Mutates ``diff`` in place; removes changes left empty."""
+    if _version_tuple(base.tool_version) >= _OVERSIGHT_INDICATOR_SINCE:
+        return
+    from ..oversight import OVERSIGHT_INDICATOR  # noqa: PLC0415
+
+    kept = []
+    for c in diff.modified:
+        c.risks_added = [r for r in c.risks_added if r != OVERSIGHT_INDICATOR]
+        if c.is_meaningful():
+            kept.append(c)
+    diff.modified = kept
 
 
 def _is_inside(path: Path, root: Path) -> bool:

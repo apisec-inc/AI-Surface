@@ -59,7 +59,7 @@ Each `compliance` entry has `flag`, `severity`, `description`, `owasp` (LLM Top 
 
 ### `check_new_ai_surface(path=".", baseline_file=None)`
 
-Reports only what changed. Without `baseline_file` it uses a rolling baseline: the first call records it and returns `baseline_created`; each later call returns the delta since the previous call and then advances the baseline, so a change is reported once. Returns `new_surfaces`, `modified_surfaces` (with `permissions_added`, `risks_added`, and so on), `removed_surfaces`, `changed`, `total_changes`, and `summary`. New and modified entries carry the same `compliance` block as a scan.
+Reports only what changed. Without `baseline_file` it uses a rolling baseline: the first call records it and returns `baseline_created`; each later call returns the delta since the previous call and then advances the baseline, so a change is reported once. Returns `new_surfaces`, `modified_surfaces` (with `permissions_added`, `risks_added`, `risks_removed`, and so on), `removed_surfaces`, `changed`, `total_changes`, `risks_cleared`, and `summary`. Since 1.1.1 a fix shows up here: an approval gate placed in front of a flagged action appears as `risks_removed: ["no human approval gate on a high-risk action"]` and is counted in `risks_cleared`. New and modified entries carry the same `compliance` block as a scan.
 
 With `baseline_file` (absolute, or relative to `path`) it compares against that file and does not modify it. Use this to ask "what is new versus the committed CI baseline?".
 
@@ -93,6 +93,7 @@ Guarantees:
 
 - Prints nothing when the edit introduced no AI surface. Removed surfaces are not reported.
 - Always exits 0. Any internal error is noted on stderr and otherwise ignored, so the hook can never break a tool call.
+- **Cleared risks are reported too (since 1.1.1).** When an edit removes a flagged risk from an existing surface, most often by putting a human approval gate in front of a financial or destructive action, the hook prints a `systemMessage` of `✅ ai-surface: a flagged risk was cleared by this edit` and a context that begins with a `CLEARED:` line, with Claude asked to open its report with `🛡️ **ai-surface** confirmed a risk is cleared:`. An edit that both adds and clears reports the additions first, then the cleared lines. Nothing is printed for an edit that only removes a surface.
 - Refuses to scan a home directory or a filesystem root, which is what `cwd` would be if Claude Code were started there.
 - Scans once per edit, in-process. A typical repository scans in well under a second.
 - Never writes inside the repository.

@@ -190,3 +190,24 @@ def test_cleared_only_context_is_none_when_nothing_cleared():
     assert hook.build_context({"new_surfaces": [], "modified_surfaces": [
         {"surface": "x", "category": "agent-framework", "files_added": ["a.py"]}
     ]}) is None
+
+
+def test_upgrade_from_pre_indicator_baseline_does_not_nag(state_dir, repo):
+    """A baseline written by 1.1.0 has no oversight indicator. The first diff
+    after upgrading must not report the indicator as a new risk."""
+    (repo / "src" / "agent.py").write_text(AGENT_AFTER)  # already ungated before upgrade
+    _run({"hook_event_name": "SessionStart", "cwd": str(repo)})
+    baseline = core.baseline_path_for(repo, core.NAMESPACE_HOOK)
+    data = json.loads(baseline.read_text())
+    data["tool_version"] = "1.1.0"
+    for f in data.get("findings", []):
+        f["risk_indicators"] = [r for r in f.get("risk_indicators", []) if "approval gate" not in r]
+    baseline.write_text(json.dumps(data))
+    # An unrelated edit: nothing should be reported.
+    (repo / "src" / "agent.py").write_text(AGENT_AFTER + "\n# touched\n")
+    code, out = _run({"hook_event_name": "PostToolUse", "tool_name": "Edit", "cwd": str(repo)})
+    assert code == 0 and out is None
+    # And the baseline has advanced to the current format, so a later fix still clears.
+    (repo / "src" / "agent.py").write_text(AGENT_GATED)
+    code, out = _run({"hook_event_name": "PostToolUse", "tool_name": "Edit", "cwd": str(repo)})
+    assert out is not None and "risk cleared" in out["hookSpecificOutput"]["additionalContext"]
